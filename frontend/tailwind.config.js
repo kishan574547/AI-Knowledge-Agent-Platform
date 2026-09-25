@@ -17,24 +17,25 @@ export default {
         accent: {
           DEFAULT: 'var(--accent)',
           hover: 'var(--accent-hover)',
-          tint: 'var(--accent-tint)',
+          muted: 'var(--accent-muted)',
         },
         success: {
           DEFAULT: 'var(--success)',
-          tint: 'var(--success-tint)',
+          muted: 'var(--success-muted)',
         },
         warning: {
           DEFAULT: 'var(--warning)',
-          tint: 'var(--warning-tint)',
+          muted: 'var(--warning-muted)',
         },
         danger: {
           DEFAULT: 'var(--danger)',
-          tint: 'var(--danger-tint)',
+          muted: 'var(--danger-muted)',
         },
       },
       fontFamily: {
-        sans: ['"Plus Jakarta Sans"', '"Inter Tight"', '"IBM Plex Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
-        mono: ['"JetBrains Mono"', '"IBM Plex Mono"', 'monospace'],
+        sans: ['"Hanken Grotesk"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+        heading: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
+        mono: ['"JetBrains Mono"', '"Courier New"', 'monospace'],
       },
       boxShadow: {
         level1: 'var(--shadow-level1)',
@@ -42,20 +43,6 @@ export default {
       },
       transitionDuration: {
         '250': '250ms',
-      },
-      animation: {
-        'shimmer': 'shimmer 2s infinite linear',
-        'pulse-subtle': 'pulseSubtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-      },
-      keyframes: {
-        shimmer: {
-          '0%': { backgroundPosition: '-200% 0' },
-          '100%': { backgroundPosition: '200% 0' },
-        },
-        pulseSubtle: {
-          '0%, 100%': { opacity: '1' },
-          '50%': { opacity: '0.4' },
-        },
       },
     },
   },

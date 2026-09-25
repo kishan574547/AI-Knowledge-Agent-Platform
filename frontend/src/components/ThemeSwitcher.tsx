@@ -61,7 +61,7 @@ export const ThemeSwitcher: React.FC = () => {
                     }}
                     className={`flex items-center gap-2.5 p-2 rounded-lg text-left transition-all border ${
                       isSelected
-                        ? 'border-accent bg-accent-tint text-text-main ring-1 ring-accent'
+                        ? 'border-accent bg-accent-muted text-text-main ring-1 ring-accent'
                         : 'border-border/60 hover:border-border hover:bg-surface-2 text-text-muted hover:text-text-main'
                     }`}
                   >

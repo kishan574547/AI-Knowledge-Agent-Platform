@@ -174,10 +174,10 @@ export const DashboardPage: React.FC = () => {
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className={`flex items-center justify-between p-3 rounded-xl border text-xs font-medium ${
+            className={`flex items-center justify-between p-3 rounded-xl border text-xs font-semibold ${
               notification.type === 'success'
-                ? 'border-success/30 bg-success-tint text-success'
-                : 'border-danger/30 bg-danger-tint text-danger'
+                ? 'border-success/30 bg-success-muted text-success'
+                : 'border-danger/30 bg-danger-muted text-danger'
             }`}
           >
             <div className="flex items-center gap-2">
@@ -212,14 +212,14 @@ export const DashboardPage: React.FC = () => {
               <div className="flex flex-col items-center gap-3 pt-1">
                 <button
                   onClick={() => setSidebarCollapsed(false)}
-                  className="p-2 rounded-lg hover:bg-surface-2 text-text-secondary hover:text-text-main transition-colors"
+                  className="p-2 rounded-lg hover:bg-surface-2 text-text-muted hover:text-text-main transition-colors"
                   title="Expand sidebar"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
                 <button
                   onClick={handleNewConversation}
-                  className="p-2 rounded-lg bg-accent-tint text-accent hover:bg-accent/20 transition-colors"
+                  className="p-2 rounded-lg bg-accent-muted text-accent hover:bg-accent/20 transition-colors"
                   title="New conversation"
                 >
                   <MessageSquare className="w-4 h-4" />
@@ -228,10 +228,12 @@ export const DashboardPage: React.FC = () => {
             ) : (
               <div className="flex flex-col h-full">
                 <div className="flex items-center justify-between pb-2 mb-2 border-b border-border">
-                  <span className="text-xs font-semibold text-text-main">Threads</span>
+                  <span className="font-heading text-xs font-bold text-text-main uppercase tracking-wider">
+                    Threads
+                  </span>
                   <button
                     onClick={() => setSidebarCollapsed(true)}
-                    className="p-1 rounded-md text-text-secondary hover:text-text-main hover:bg-surface-2 transition-colors"
+                    className="p-1 rounded-md text-text-muted hover:text-text-main hover:bg-surface-2 transition-colors"
                     title="Collapse sidebar"
                   >
                     <ChevronLeft className="w-3.5 h-3.5" />
@@ -270,17 +272,17 @@ export const DashboardPage: React.FC = () => {
       ) : (
         /* Documents Management View */
         <div className="flex flex-col flex-1 gap-4 overflow-y-auto pr-1">
-          {/* 3 Metric Stat Cards with Status Top Borders */}
+          {/* 3 Metric Stat Cards with Colored Chips & Top Borders */}
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             {/* Total Documents */}
             <div className="rounded-xl border border-border border-t-2 border-t-accent bg-surface p-4 shadow-level1 flex items-center justify-between">
               <div>
-                <span className="text-[11px] font-medium text-text-secondary">Total Documents</span>
-                <div className="text-2xl font-bold font-mono text-text-main mt-0.5">
+                <span className="text-[11px] font-semibold text-text-muted">Total Documents</span>
+                <div className="stat-number text-2xl font-extrabold font-mono text-text-main mt-0.5">
                   {documents.length}
                 </div>
               </div>
-              <div className="w-9 h-9 rounded-lg bg-accent-tint text-accent flex items-center justify-center">
+              <div className="w-9 h-9 rounded-full bg-accent-muted text-accent flex items-center justify-center">
                 <Files className="w-4 h-4" />
               </div>
             </div>
@@ -288,12 +290,12 @@ export const DashboardPage: React.FC = () => {
             {/* Ready for RAG */}
             <div className="rounded-xl border border-border border-t-2 border-t-success bg-surface p-4 shadow-level1 flex items-center justify-between">
               <div>
-                <span className="text-[11px] font-medium text-text-secondary">Ready for RAG</span>
-                <div className="text-2xl font-bold font-mono text-success mt-0.5">
+                <span className="text-[11px] font-semibold text-text-muted">Ready for RAG</span>
+                <div className="stat-number text-2xl font-extrabold font-mono text-success mt-0.5">
                   {readyCount}
                 </div>
               </div>
-              <div className="w-9 h-9 rounded-lg bg-success-tint text-success flex items-center justify-center">
+              <div className="w-9 h-9 rounded-full bg-success-muted text-success flex items-center justify-center">
                 <Layers className="w-4 h-4" />
               </div>
             </div>
@@ -301,12 +303,12 @@ export const DashboardPage: React.FC = () => {
             {/* Storage Used */}
             <div className="rounded-xl border border-border border-t-2 border-t-warning bg-surface p-4 shadow-level1 flex items-center justify-between">
               <div>
-                <span className="text-[11px] font-medium text-text-secondary">Storage Used</span>
-                <div className="text-2xl font-bold font-mono text-text-main mt-0.5">
+                <span className="text-[11px] font-semibold text-text-muted">Storage Used</span>
+                <div className="stat-number text-2xl font-extrabold font-mono text-text-main mt-0.5">
                   {formatFileSize(totalBytes)}
                 </div>
               </div>
-              <div className="w-9 h-9 rounded-lg bg-warning-tint text-warning flex items-center justify-center">
+              <div className="w-9 h-9 rounded-full bg-warning-muted text-warning flex items-center justify-center">
                 <HardDrive className="w-4 h-4" />
               </div>
             </div>
@@ -315,19 +317,19 @@ export const DashboardPage: React.FC = () => {
           {/* Search + Action Control Bar */}
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
-              <Search className="w-4 h-4 text-text-secondary absolute left-3.5 top-3" />
+              <Search className="w-4 h-4 text-text-muted absolute left-3.5 top-3" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search documents by name..."
-                className="w-full h-10 pl-10 pr-4 bg-surface border border-border rounded-xl text-xs text-text-main placeholder-text-secondary/60 focus:border-accent transition-all shadow-level1"
+                className="w-full h-10 pl-10 pr-4 bg-surface border border-border rounded-xl text-xs text-text-main placeholder-text-muted/70 focus:border-accent transition-all shadow-level1 font-sans"
               />
             </div>
 
             <button
               onClick={() => setIsUploadModalOpen(true)}
-              className="h-10 px-4 rounded-xl bg-accent text-white text-xs font-medium flex items-center gap-2 hover:bg-accent-hover transition-colors shadow-sm shrink-0"
+              className="btn-primary !h-10 !px-4 !rounded-xl shrink-0"
             >
               <UploadCloud className="w-4 h-4" />
               <span>Upload Document</span>
@@ -336,29 +338,29 @@ export const DashboardPage: React.FC = () => {
             <button
               onClick={() => fetchDocuments(true)}
               disabled={isRefreshing}
-              className="h-10 w-10 rounded-xl border border-border bg-surface hover:bg-surface-2 text-text-secondary hover:text-text-main flex items-center justify-center transition-colors shadow-level1 shrink-0"
+              className="h-10 w-10 rounded-xl border border-border bg-surface hover:bg-surface-2 text-text-muted hover:text-text-main flex items-center justify-center transition-colors shadow-level1 shrink-0"
               title="Refresh list"
             >
               <RotateCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-accent' : ''}`} />
             </button>
           </div>
 
-          {/* 3-Column Document Grid */}
+          {/* 3-Column Document Grid with Staggered Entrance */}
           <div className="flex-1">
             {loading ? (
               <div className="py-16 flex flex-col items-center justify-center text-center">
                 <Spinner size="lg" />
-                <p className="text-xs text-text-secondary mt-3">Loading workspace documents...</p>
+                <p className="text-xs text-text-muted mt-3">Loading workspace documents...</p>
               </div>
             ) : filteredDocs.length === 0 ? (
               <div className="py-16 text-center rounded-2xl border border-dashed border-border bg-surface/50 p-8">
-                <div className="w-12 h-12 rounded-full bg-surface-2 border border-border flex items-center justify-center text-text-secondary mx-auto mb-3">
+                <div className="w-12 h-12 rounded-full bg-surface-2 border border-border flex items-center justify-center text-text-muted mx-auto mb-3">
                   <Files className="w-6 h-6" />
                 </div>
-                <h3 className="text-sm font-semibold text-text-main">
+                <h3 className="font-heading text-sm font-bold text-text-main">
                   {searchQuery ? 'No matching documents found' : 'No documents uploaded yet'}
                 </h3>
-                <p className="text-xs text-text-secondary mt-1 max-w-sm mx-auto">
+                <p className="text-xs text-text-muted mt-1 max-w-sm mx-auto">
                   {searchQuery
                     ? 'Try searching with a different keyword.'
                     : 'Upload PDF, DOCX, TXT, or Markdown documents to start chatting.'}
@@ -366,7 +368,7 @@ export const DashboardPage: React.FC = () => {
                 {!searchQuery && (
                   <button
                     onClick={() => setIsUploadModalOpen(true)}
-                    className="mt-4 px-4 py-2 rounded-lg bg-accent text-white text-xs font-medium inline-flex items-center gap-2 hover:bg-accent-hover transition-colors"
+                    className="btn-primary mt-4"
                   >
                     <UploadCloud className="w-3.5 h-3.5" />
                     <span>Upload your first document</span>
@@ -379,14 +381,14 @@ export const DashboardPage: React.FC = () => {
                 className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5"
               >
                 <AnimatePresence>
-                  {filteredDocs.map((doc) => (
+                  {filteredDocs.map((doc, idx) => (
                     <motion.div
                       key={doc.id}
                       layout
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, scale: 0.95 }}
-                      transition={{ duration: 0.18 }}
+                      transition={{ duration: 0.2, delay: idx * 0.04 }}
                     >
                       <DocumentCard
                         document={doc}

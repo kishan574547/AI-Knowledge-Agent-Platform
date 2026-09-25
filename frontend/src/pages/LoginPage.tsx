@@ -53,7 +53,7 @@ export const LoginPage: React.FC = () => {
           {/* Left Column: Form (55% / 7 cols) */}
           <div className="lg:col-span-7 p-8 sm:p-10 flex flex-col justify-center">
             <div className="mb-6">
-              <h1 className="text-2xl font-bold tracking-tight text-text-main">Sign in</h1>
+              <h1 className="font-heading text-2xl font-bold tracking-tight text-text-main">Sign in</h1>
               <p className="text-xs text-text-secondary mt-1.5">
                 Access your private workspace and grounded document intelligence.
               </p>

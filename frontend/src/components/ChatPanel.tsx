@@ -8,6 +8,7 @@ import {
   Sparkles,
   FileText,
   AlertCircle,
+  BookOpen,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMessage, Conversation } from '../types/conversation';
@@ -44,14 +45,14 @@ const UserBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => (
     className="flex items-start gap-2.5 justify-end"
   >
     <div className="max-w-[80%]">
-      <div className="bg-accent text-white text-sm px-4 py-2.5 rounded-2xl rounded-tr-sm shadow-sm">
+      <div className="bg-accent text-white text-sm px-4 py-2.5 rounded-2xl rounded-tr-sm shadow-sm font-sans">
         <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
       </div>
       <div className="text-right mt-1">
-        <span className="text-[10px] font-mono text-text-secondary">{formatTime(msg.timestamp)}</span>
+        <span className="text-[10px] font-mono text-text-muted">{formatTime(msg.timestamp)}</span>
       </div>
     </div>
-    <div className="w-7 h-7 rounded-full bg-surface-2 border border-border flex items-center justify-center text-text-secondary shrink-0 mt-0.5">
+    <div className="w-7 h-7 rounded-full bg-accent text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm font-semibold text-xs">
       <User className="w-3.5 h-3.5" />
     </div>
   </motion.div>
@@ -72,14 +73,14 @@ const AssistantBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
       <div
         className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
           msg.isError
-            ? 'bg-danger-tint border border-danger text-danger'
-            : 'bg-surface-2 border border-border text-text-main'
+            ? 'bg-danger-muted border border-danger text-danger'
+            : 'bg-accent-muted border border-accent/20 text-accent'
         }`}
       >
         {msg.isError ? (
           <AlertCircle className="w-3.5 h-3.5" />
         ) : (
-          <div className="w-2.5 h-2.5 rounded-sm bg-accent" />
+          <Sparkles className="w-3.5 h-3.5" />
         )}
       </div>
 
@@ -87,11 +88,11 @@ const AssistantBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
         <div
           className={`px-4 py-3 rounded-2xl rounded-tl-sm text-sm border ${
             msg.isError
-              ? 'bg-danger-tint border-danger/30 text-danger'
+              ? 'bg-danger-muted border-danger/30 text-danger'
               : 'bg-surface border-border text-text-main shadow-level1'
           }`}
         >
-          <div className="leading-relaxed whitespace-pre-wrap break-words">{msg.content}</div>
+          <div className="leading-relaxed whitespace-pre-wrap break-words font-sans">{msg.content}</div>
         </div>
 
         {/* Sources Accordion */}
@@ -99,8 +100,9 @@ const AssistantBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
           <div className="pt-0.5">
             <button
               onClick={() => setShowSources(!showSources)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-2 hover:bg-border/60 text-[11px] font-medium text-text-secondary hover:text-text-main transition-colors border border-border"
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-accent-muted text-[11px] font-mono font-semibold text-accent hover:bg-accent/20 transition-colors"
             >
+              <BookOpen className="w-3 h-3" />
               <span>{msg.sources!.length} verified source{msg.sources!.length !== 1 ? 's' : ''}</span>
               <ChevronDown
                 className={`w-3 h-3 transition-transform duration-200 ${showSources ? 'rotate-180' : ''}`}
@@ -127,17 +129,17 @@ const AssistantBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
                           {s.filename}
                         </span>
                         {s.page !== undefined && s.page !== null && (
-                          <span className="text-[10px] font-mono text-text-secondary">
+                          <span className="text-[10px] font-mono text-text-muted">
                             p.{s.page}
                           </span>
                         )}
-                        <span className="text-[10px] font-mono text-text-secondary">
+                        <span className="text-[10px] font-mono text-text-muted">
                           chunk #{s.chunk_index}
                         </span>
                       </div>
 
                       {s.similarity !== undefined && (
-                        <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-surface-2 text-text-muted shrink-0">
+                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-accent-muted text-accent shrink-0">
                           {Math.round(s.similarity * 100)}% match
                         </span>
                       )}
@@ -149,7 +151,7 @@ const AssistantBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
           </div>
         )}
 
-        <div className="text-[10px] font-mono text-text-secondary">
+        <div className="text-[10px] font-mono text-text-muted">
           {formatTime(msg.timestamp)}
         </div>
       </div>
@@ -164,14 +166,14 @@ const ThinkingSkeleton: React.FC = () => (
     animate={{ opacity: 1, y: 0 }}
     className="flex items-start gap-2.5"
   >
-    <div className="w-7 h-7 rounded-full bg-surface-2 border border-border flex items-center justify-center shrink-0 mt-0.5">
-      <div className="w-2 h-2 rounded-sm bg-accent animate-pulse" />
+    <div className="w-7 h-7 rounded-full bg-accent-muted border border-accent/20 flex items-center justify-center shrink-0 mt-0.5 text-accent">
+      <Sparkles className="w-3.5 h-3.5 animate-pulse" />
     </div>
     <div className="max-w-[70%] space-y-2 p-4 rounded-2xl rounded-tl-sm bg-surface border border-border shadow-level1">
-      <div className="h-3 w-48 rounded bg-surface-2 animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
-      <div className="h-3 w-64 rounded bg-surface-2 animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
-      <div className="h-3 w-32 rounded bg-surface-2 animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
-      <p className="text-[11px] text-text-secondary mt-1">Searching documents and generating grounded answer…</p>
+      <div className="skeleton-line w-48" />
+      <div className="skeleton-line w-64" />
+      <div className="skeleton-line w-36" />
+      <p className="text-[11px] text-text-muted mt-1 font-medium">Searching documents and generating grounded answer…</p>
     </div>
   </motion.div>
 );
@@ -249,10 +251,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       {/* Header Bar */}
       <div className="px-5 py-3 border-b border-border bg-surface flex items-center justify-between gap-4 shrink-0">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-text-main truncate">
+          <h2 className="font-heading text-sm font-bold text-text-main truncate">
             {conversation?.title || 'New Exploration'}
           </h2>
-          <p className="text-[11px] text-text-secondary">
+          <p className="text-[11px] text-text-muted">
             Answers are grounded in your uploaded documents
           </p>
         </div>
@@ -261,7 +263,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <div className="relative" ref={scopeMenuRef}>
           <button
             onClick={() => setIsScopeMenuOpen(!isScopeMenuOpen)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-border/60 text-xs font-medium text-text-main transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-border/60 text-xs font-semibold text-text-main transition-all"
           >
             <Filter className="w-3.5 h-3.5 text-accent" />
             <span>
@@ -269,7 +271,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 ? 'All documents'
                 : `${selectedIds.length} selected`}
             </span>
-            <ChevronDown className="w-3 h-3 text-text-secondary" />
+            <ChevronDown className="w-3 h-3 text-text-muted" />
           </button>
 
           <AnimatePresence>
@@ -281,7 +283,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 transition={{ duration: 0.15 }}
                 className="absolute right-0 mt-1.5 w-64 rounded-xl border border-border bg-surface shadow-level2 p-2 z-30"
               >
-                <div className="p-1 text-[11px] font-semibold text-text-secondary uppercase">
+                <div className="p-1 text-[11px] font-semibold text-text-muted uppercase tracking-wider">
                   Context Scope
                 </div>
 
@@ -289,7 +291,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   onClick={selectAll}
                   className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition-colors ${
                     scope === 'all'
-                      ? 'bg-accent-tint text-accent font-medium'
+                      ? 'bg-accent-muted text-accent font-semibold'
                       : 'hover:bg-surface-2 text-text-main'
                   }`}
                 >
@@ -299,13 +301,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
                 <div className="my-1.5 border-t border-border" />
 
-                <div className="p-1 text-[11px] font-semibold text-text-secondary">
+                <div className="p-1 text-[11px] font-semibold text-text-muted">
                   Or pick specific files:
                 </div>
 
                 <div className="max-h-44 overflow-y-auto space-y-0.5">
                   {documents.length === 0 ? (
-                    <div className="p-2 text-center text-xs text-text-secondary">
+                    <div className="p-2 text-center text-xs text-text-muted">
                       No uploaded documents
                     </div>
                   ) : (
@@ -345,13 +347,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
         {(!conversation || conversation.messages.length === 0) && (
           <div className="h-full flex flex-col items-center justify-center text-center px-4 py-10">
-            <div className="w-10 h-10 rounded-full bg-surface-2 border border-border flex items-center justify-center text-accent mb-3">
+            <div className="w-10 h-10 rounded-full bg-accent-muted border border-accent/20 flex items-center justify-center text-accent mb-3">
               <Sparkles className="w-5 h-5" />
             </div>
-            <h3 className="text-sm font-semibold text-text-main">
+            <h3 className="font-heading text-sm font-bold text-text-main">
               Ask anything about your documents
             </h3>
-            <p className="text-xs text-text-secondary mt-1 max-w-sm">
+            <p className="text-xs text-text-muted mt-1 max-w-sm">
               Questions are matched against vector embeddings and answered directly from your verified source files.
             </p>
 
@@ -364,7 +366,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     setInput(chip);
                     textareaRef.current?.focus();
                   }}
-                  className="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-2 hover:border-accent/60 text-xs text-text-main transition-all"
+                  className="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-2 hover:border-accent text-xs font-medium text-text-main transition-all"
                 >
                   {chip}
                 </button>
@@ -399,20 +401,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             }}
             onKeyDown={handleKeyDown}
             placeholder="Ask a question about your documents... (Enter to send, Shift+Enter for newline)"
-            className="w-full resize-none pl-4 pr-12 py-3 bg-surface-2 border border-border rounded-xl text-sm text-text-main placeholder-text-secondary/60 focus:bg-surface focus:border-accent transition-all leading-relaxed"
+            className="w-full resize-none pl-4 pr-12 py-3 bg-surface-2 border border-border rounded-xl text-sm text-text-main placeholder-text-muted/70 focus:bg-surface focus:border-accent transition-all leading-relaxed font-sans"
           />
 
           <button
             type="submit"
             disabled={!input.trim() || isQuerying}
-            className="absolute right-2.5 top-2.5 w-8 h-8 rounded-lg bg-accent text-white flex items-center justify-center hover:bg-accent-hover disabled:opacity-40 disabled:hover:bg-accent transition-all"
+            className="btn-primary absolute right-2.5 top-2.5 !p-2 !rounded-lg"
             title="Send question"
           >
             {isQuerying ? <Spinner size="sm" /> : <Send className="w-3.5 h-3.5" />}
           </button>
         </form>
 
-        <div className="mt-2 text-center text-[11px] text-text-secondary">
+        <div className="mt-2 text-center text-[11px] font-medium text-text-muted">
           Every answer links back to the exact document and passage it came from.
         </div>
       </div>

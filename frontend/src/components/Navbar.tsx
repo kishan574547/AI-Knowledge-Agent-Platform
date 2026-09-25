@@ -36,7 +36,6 @@ export const Navbar: React.FC = () => {
     navigate('/login');
   };
 
-  // Generate deterministic muted avatar background from user email
   const getAvatarInitials = () => {
     if (!user?.email) return 'U';
     return user.email.slice(0, 2).toUpperCase();
@@ -48,12 +47,11 @@ export const Navbar: React.FC = () => {
         {/* Left Section: Brand Wordmark + Workspace Selector */}
         <div className="flex items-center gap-6">
           <Link to="/" className="flex items-center gap-2.5 group">
-            {/* Geometric calm brand mark */}
-            <div className="w-7 h-7 rounded-lg bg-text-main flex items-center justify-center text-surface font-mono font-bold text-xs shadow-sm">
+            <div className="w-7 h-7 rounded-lg bg-accent text-white font-mono font-bold text-xs flex items-center justify-center shadow-sm">
               R
             </div>
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-text-main tracking-tight text-sm">
+              <span className="font-heading font-bold text-text-main tracking-tight text-sm">
                 DocuRAG
               </span>
               <span className="hidden sm:inline-flex items-center gap-1 text-[11px] font-medium text-text-muted px-2 py-0.5 rounded-md bg-surface-2 border border-border">
@@ -67,8 +65,8 @@ export const Navbar: React.FC = () => {
           <nav className="flex items-center gap-1">
             <button
               onClick={() => setActiveTab('chat')}
-              className={`relative px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === 'chat' ? 'text-text-main' : 'text-text-muted hover:text-text-main'
+              className={`relative px-3 py-1.5 text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                activeTab === 'chat' ? 'text-accent' : 'text-text-muted hover:text-text-main'
               }`}
             >
               <MessageSquare className="w-3.5 h-3.5" />
@@ -76,7 +74,7 @@ export const Navbar: React.FC = () => {
               {activeTab === 'chat' && (
                 <motion.div
                   layoutId="navbarTabUnderline"
-                  className="absolute bottom-[-13px] left-0 right-0 h-[2px] bg-accent"
+                  className="absolute bottom-[-13px] left-0 right-0 h-[2.5px] bg-accent rounded-full"
                   transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                 />
               )}
@@ -84,21 +82,21 @@ export const Navbar: React.FC = () => {
 
             <button
               onClick={() => setActiveTab('documents')}
-              className={`relative px-3 py-1.5 text-xs font-medium transition-colors flex items-center gap-1.5 ${
-                activeTab === 'documents' ? 'text-text-main' : 'text-text-muted hover:text-text-main'
+              className={`relative px-3 py-1.5 text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                activeTab === 'documents' ? 'text-accent' : 'text-text-muted hover:text-text-main'
               }`}
             >
               <Files className="w-3.5 h-3.5" />
               <span>Documents</span>
               {totalDocCount > 0 && (
-                <span className="text-[10px] font-mono font-medium px-1.5 py-0.2 rounded-full bg-surface-2 border border-border text-text-muted">
+                <span className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded-full bg-accent-muted text-accent">
                   {totalDocCount}
                 </span>
               )}
               {activeTab === 'documents' && (
                 <motion.div
                   layoutId="navbarTabUnderline"
-                  className="absolute bottom-[-13px] left-0 right-0 h-[2px] bg-accent"
+                  className="absolute bottom-[-13px] left-0 right-0 h-[2.5px] bg-accent rounded-full"
                   transition={{ type: 'spring', stiffness: 450, damping: 35 }}
                 />
               )}
@@ -106,15 +104,15 @@ export const Navbar: React.FC = () => {
           </nav>
         </div>
 
-        {/* Right Section: Upload CTA -> Theme Switcher -> User Profile Dropdown */}
+        {/* Right Section: Filled Upload Button -> Theme Switcher -> User Avatar Dropdown */}
         <div className="flex items-center gap-2.5">
-          {/* Upload Button (Outlined Secondary) */}
+          {/* Primary Filled Upload Button */}
           <button
             onClick={() => setIsUploadModalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-2 text-text-main text-xs font-medium transition-all"
+            className="btn-primary"
             title="Upload Document"
           >
-            <UploadCloud className="w-3.5 h-3.5 text-accent" />
+            <UploadCloud className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Upload</span>
           </button>
 
@@ -126,10 +124,10 @@ export const Navbar: React.FC = () => {
             <div className="relative" ref={userMenuRef}>
               <button
                 onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                className="flex items-center gap-1.5 p-0.5 rounded-full hover:ring-2 hover:ring-border transition-all"
+                className="flex items-center gap-1.5 p-0.5 rounded-full hover:ring-2 hover:ring-accent transition-all"
                 title="Account Settings"
               >
-                <div className="w-7 h-7 rounded-full bg-accent/15 border border-accent/30 text-accent font-mono text-[11px] font-semibold flex items-center justify-center">
+                <div className="w-7 h-7 rounded-full bg-accent-muted border border-accent/30 text-accent font-mono text-[11px] font-bold flex items-center justify-center">
                   {getAvatarInitials()}
                 </div>
               </button>
@@ -150,15 +148,15 @@ export const Navbar: React.FC = () => {
                       <div className="text-[11px] font-mono text-text-muted truncate mt-0.5">
                         {user.email}
                       </div>
-                      <div className="flex items-center gap-1.5 mt-2 text-[10px] text-success">
-                        <ShieldCheck className="w-3 h-3" />
+                      <div className="flex items-center gap-1.5 mt-2 text-[10px] text-success font-medium">
+                        <ShieldCheck className="w-3.5 h-3.5" />
                         <span>Supabase RLS Protected</span>
                       </div>
                     </div>
 
                     <button
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2 p-2 rounded-lg text-xs font-medium text-danger hover:bg-danger-tint transition-colors"
+                      className="w-full flex items-center gap-2 p-2 rounded-lg text-xs font-medium text-danger hover:bg-danger-muted transition-colors"
                     >
                       <LogOut className="w-3.5 h-3.5" />
                       <span>Sign Out</span>
