@@ -9,6 +9,8 @@ from app.core.config import settings
 from app.core.errors import AppSecurityException, ResourceNotFoundException, FileValidationException
 from app.repositories.document_repo import DocumentRepository
 from app.repositories.conversation_repo import ConversationRepository
+from app.repositories.memory_repo import MemoryRepository
+from app.services.memory_service import MemoryService
 from app.rag.embeddings import embedding_service
 from app.rag.retrieval import VectorRetriever, RetrievedChunk
 from app.rag.generation import gemini_client
@@ -35,6 +37,7 @@ class RAGQueryResponse(BaseModel):
     answer: str
     sources: List[SourceItem]
     conversation_id: Optional[uuid.UUID] = None
+    memories_used_count: int = 0
 
 
 class RAGQAPipeline:
@@ -43,6 +46,8 @@ class RAGQAPipeline:
         self.doc_repo = DocumentRepository(db)
         self.conv_repo = ConversationRepository(db)
         self.retriever = VectorRetriever(db)
+        self.memory_repo = MemoryRepository(db)
+        self.memory_service = MemoryService(db)
 
     def execute_query(
         self,
@@ -56,11 +61,12 @@ class RAGQAPipeline:
         1. Validates inputs & document ownership
         2. Embeds question using local embedding model
         3. Retrieves user-scoped chunks from pgvector
-        4. If no relevant chunks: returns safe no-result response
-        5. Constructs context string within MAX_CONTEXT_CHARS
-        6. Calls Gemini with grounded system prompt & prompt injection barriers
-        7. Constructs DB-verified source metadata
+        4. Retrieves user-scoped long-term memories from pgvector
+        5. If no relevant chunks: returns safe no-result response
+        6. Constructs context string within MAX_CONTEXT_CHARS
+        7. Calls Gemini with grounded context + memory context + injection barriers
         8. Records question/answer in conversation history
+        9. Conservatively extracts and saves relevant memory
         """
         start_time = time.time()
         cleaned_question = question.strip()
@@ -116,15 +122,34 @@ class RAGQAPipeline:
             settings.RAG_TOP_K,
         )
 
-        # 5. Handle no relevant chunks
+        # 5. Retrieve user-scoped long-term memories
+        memories_used_count = 0
+        memory_context_str: Optional[str] = None
+        try:
+            user_memories = self.memory_repo.search_similar_memories(
+                query_vector=query_vector,
+                owner_id=owner_id,
+                top_k=5,
+                similarity_threshold=0.60,
+            )
+            if user_memories:
+                memories_used_count = len(user_memories)
+                memory_lines = [f"- [{m.memory_type.upper()}] {m.content}" for m in user_memories]
+                memory_context_str = "\n".join(memory_lines)
+                logger.info("Retrieved %d relevant long-term memories for user %s", len(user_memories), str(owner_id))
+        except Exception as mem_err:
+            logger.warning("Memory retrieval warning: %s", str(mem_err))
+
+        # 6. Handle no relevant chunks
         if not retrieved_chunks:
             return RAGQueryResponse(
                 answer="I couldn't find relevant information in your documents.",
                 sources=[],
                 conversation_id=active_conversation_id,
+                memories_used_count=memories_used_count,
             )
 
-        # 6. Build context string respecting MAX_CONTEXT_CHARS
+        # 7. Build context string respecting MAX_CONTEXT_CHARS
         context_parts: List[str] = []
         sources: List[SourceItem] = []
         total_chars = 0
@@ -156,15 +181,16 @@ class RAGQAPipeline:
 
         full_context = "\n".join(context_parts)
 
-        # 7. Generate grounded answer via Gemini
+        # 8. Generate grounded answer via Gemini (incorporating memory context)
         t_gen = time.time()
         answer = gemini_client.generate_grounded_answer(
-            question=cleaned_question,
-            context_str=full_context,
+            cleaned_question,
+            full_context,
+            memory_context_str,
         )
         logger.info("Gemini generated answer in %.2fs", time.time() - t_gen)
 
-        # 8. Persist conversation history if requested
+        # 9. Persist conversation history if requested
         if active_conversation_id:
             try:
                 self.conv_repo.create_message(
@@ -182,9 +208,20 @@ class RAGQAPipeline:
             except Exception as e:
                 logger.warning("Failed to persist conversation message: %s", str(e))
 
+        # 10. Conservative long-term memory extraction from user message
+        try:
+            self.memory_service.extract_and_save_from_text(
+                owner_id=owner_id,
+                text=cleaned_question,
+                source_conversation_id=active_conversation_id,
+            )
+        except Exception as ext_err:
+            logger.warning("Background memory extraction warning: %s", str(ext_err))
+
         logger.info("Total RAG Q&A pipeline duration: %.2fs", time.time() - start_time)
         return RAGQueryResponse(
             answer=answer,
             sources=sources,
             conversation_id=active_conversation_id,
+            memories_used_count=memories_used_count,
         )

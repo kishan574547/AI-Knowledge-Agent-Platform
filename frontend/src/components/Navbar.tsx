@@ -1,8 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import {
   MessageSquare,
   Files,
+  Brain,
   UploadCloud,
   LogOut,
   ChevronDown,
@@ -17,9 +18,12 @@ export const Navbar: React.FC = () => {
   const { user, logout } = useAuth();
   const { activeTab, setActiveTab, setIsUploadModalOpen, totalDocCount } = useDashboard();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+
+  const isMemoryRoute = location.pathname === '/memory';
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -39,6 +43,13 @@ export const Navbar: React.FC = () => {
   const getAvatarInitials = () => {
     if (!user?.email) return 'U';
     return user.email.slice(0, 2).toUpperCase();
+  };
+
+  const handleTabClick = (tab: 'chat' | 'documents') => {
+    setActiveTab(tab);
+    if (location.pathname !== '/') {
+      navigate('/');
+    }
   };
 
   return (
@@ -64,14 +75,14 @@ export const Navbar: React.FC = () => {
           {/* Navigation Underline Tabs */}
           <nav className="flex items-center gap-1">
             <button
-              onClick={() => setActiveTab('chat')}
+              onClick={() => handleTabClick('chat')}
               className={`relative px-3 py-1.5 text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                activeTab === 'chat' ? 'text-accent' : 'text-text-muted hover:text-text-main'
+                !isMemoryRoute && activeTab === 'chat' ? 'text-accent' : 'text-text-muted hover:text-text-main'
               }`}
             >
               <MessageSquare className="w-3.5 h-3.5" />
               <span>Chat</span>
-              {activeTab === 'chat' && (
+              {!isMemoryRoute && activeTab === 'chat' && (
                 <motion.div
                   layoutId="navbarTabUnderline"
                   className="absolute bottom-[-13px] left-0 right-0 h-[2.5px] bg-accent rounded-full"
@@ -81,9 +92,9 @@ export const Navbar: React.FC = () => {
             </button>
 
             <button
-              onClick={() => setActiveTab('documents')}
+              onClick={() => handleTabClick('documents')}
               className={`relative px-3 py-1.5 text-xs font-semibold transition-colors flex items-center gap-1.5 ${
-                activeTab === 'documents' ? 'text-accent' : 'text-text-muted hover:text-text-main'
+                !isMemoryRoute && activeTab === 'documents' ? 'text-accent' : 'text-text-muted hover:text-text-main'
               }`}
             >
               <Files className="w-3.5 h-3.5" />
@@ -93,7 +104,7 @@ export const Navbar: React.FC = () => {
                   {totalDocCount}
                 </span>
               )}
-              {activeTab === 'documents' && (
+              {!isMemoryRoute && activeTab === 'documents' && (
                 <motion.div
                   layoutId="navbarTabUnderline"
                   className="absolute bottom-[-13px] left-0 right-0 h-[2.5px] bg-accent rounded-full"
@@ -101,6 +112,24 @@ export const Navbar: React.FC = () => {
                 />
               )}
             </button>
+
+            {/* Dedicated Long-Term Memory Navigation Item */}
+            <Link
+              to="/memory"
+              className={`relative px-3 py-1.5 text-xs font-semibold transition-colors flex items-center gap-1.5 ${
+                isMemoryRoute ? 'text-accent' : 'text-text-muted hover:text-text-main'
+              }`}
+            >
+              <Brain className="w-3.5 h-3.5" />
+              <span>🧠 Memory</span>
+              {isMemoryRoute && (
+                <motion.div
+                  layoutId="navbarTabUnderline"
+                  className="absolute bottom-[-13px] left-0 right-0 h-[2.5px] bg-accent rounded-full"
+                  transition={{ type: 'spring', stiffness: 450, damping: 35 }}
+                />
+              )}
+            </Link>
           </nav>
         </div>
 

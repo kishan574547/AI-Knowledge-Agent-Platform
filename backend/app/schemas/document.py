@@ -9,8 +9,8 @@ class DocumentResponse(BaseModel):
     owner_id: uuid.UUID
     filename: str
     storage_path: str
-    # The DB column is mime_type; expose as file_type for frontend compatibility
-    file_type: Optional[str] = Field(None, alias="mime_type")
+    file_type: Optional[str] = None
+    mime_type: Optional[str] = None
     file_size: Optional[int] = None
     status: str
     chunk_count: int = 0

@@ -20,8 +20,8 @@ if config.config_file_name is not None:
 
 target_metadata = Base.metadata
 
-# Override alembic.ini url with settings.DATABASE_URL
-config.set_main_option("sqlalchemy.url", settings.DATABASE_URL)
+# Override alembic.ini url with settings.DATABASE_URL (escape % for configparser)
+config.set_main_option("sqlalchemy.url", settings.DATABASE_URL.replace("%", "%%"))
 
 
 def run_migrations_offline() -> None:

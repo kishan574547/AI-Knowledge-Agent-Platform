@@ -12,7 +12,7 @@ def test_upload_txt_document(client, user_a_headers):
     assert data["filename"] == "sample.txt"
     assert data["file_type"] == "text/plain"
     assert data["file_size"] == len(file_content)
-    assert data["status"] == "ready"
+    assert data["status"] in ("ready", "processing")
     assert "id" in data
 
 

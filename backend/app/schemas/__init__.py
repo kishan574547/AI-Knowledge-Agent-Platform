@@ -17,6 +17,15 @@ from app.schemas.conversation import (
     ConversationListResponse,
 )
 from app.schemas.message import MessageCreateRequest, MessageResponse
+from app.schemas.memory import (
+    MemoryType,
+    MemoryCreate,
+    MemoryUpdate,
+    MemoryResponse,
+    MemoryListResponse,
+    RetrievedMemory,
+    MemoryStatsResponse,
+)
 
 __all__ = [
     "UserRegisterRequest",
@@ -34,4 +43,11 @@ __all__ = [
     "ConversationListResponse",
     "MessageCreateRequest",
     "MessageResponse",
+    "MemoryType",
+    "MemoryCreate",
+    "MemoryUpdate",
+    "MemoryResponse",
+    "MemoryListResponse",
+    "RetrievedMemory",
+    "MemoryStatsResponse",
 ]

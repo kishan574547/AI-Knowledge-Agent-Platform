@@ -239,7 +239,7 @@ def test_rag_qa_pipeline_successful_answer(db_session, monkeypatch):
     service = LocalEmbeddingService.get_instance()
     monkeypatch.setattr(service, "embed_query", lambda q: [0.2] * 384)
 
-    def mock_gemini(question, context_str):
+    def mock_gemini(question, context_str, *args, **kwargs):
         assert "October 15th" in context_str
         return "The deadline for Phase 2 is October 15th based on the plan."
 
@@ -313,7 +313,7 @@ def test_api_rag_query_authorized(client, user_a_headers, monkeypatch):
     monkeypatch.setattr(
         gemini_client,
         "generate_grounded_answer",
-        lambda q, c: "Sample grounded answer from mock Gemini.",
+        lambda q, c, *args, **kwargs: "Sample grounded answer from mock Gemini.",
     )
 
     payload = {

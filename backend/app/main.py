@@ -11,6 +11,7 @@ from app.api.routes.auth import router as auth_router
 from app.api.routes.users import router as users_router
 from app.api.routes.documents import router as documents_router
 from app.api.routes.rag import router as rag_router
+from app.api.routes.memory import router as memory_router
 
 # Configure logging
 logging.basicConfig(
@@ -62,6 +63,7 @@ app.include_router(auth_router, prefix=settings.API_V1_STR)
 app.include_router(users_router, prefix=settings.API_V1_STR)
 app.include_router(documents_router, prefix=settings.API_V1_STR)
 app.include_router(rag_router, prefix=settings.API_V1_STR)
+app.include_router(memory_router, prefix=settings.API_V1_STR)
 
 
 

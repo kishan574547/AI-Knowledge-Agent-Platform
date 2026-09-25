@@ -39,6 +39,10 @@ class Document(TimeStampedModel):
     def file_type(self) -> Optional[str]:
         return self.mime_type
 
+    @file_type.setter
+    def file_type(self, value: Optional[str]) -> None:
+        self.mime_type = value
+
     # Relationships
     owner: Mapped[Optional["Profile"]] = relationship(
         "Profile",
