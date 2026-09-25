@@ -1,16 +1,18 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
-  Plus,
   Files,
   HardDrive,
   Search,
-  RefreshCw,
+  RotateCw,
   Layers,
-  MessageSquare,
-  LayoutGrid,
   ChevronLeft,
   ChevronRight,
+  UploadCloud,
+  MessageSquare,
+  AlertCircle,
+  CheckCircle2,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { documentService } from '../services/documentService';
 import { ragService } from '../services/ragService';
 import { DocumentItem } from '../types/document';
@@ -19,23 +21,30 @@ import { DocumentUploadModal } from '../components/DocumentUploadModal';
 import { ConversationSidebar } from '../components/ConversationSidebar';
 import { ChatPanel } from '../components/ChatPanel';
 import { Spinner } from '../components/Spinner';
-import { Alert } from '../components/Alert';
 import { useConversations } from '../hooks/useConversations';
+import { useDashboard } from '../context/DashboardContext';
 import { formatFileSize } from '../utils/formatters';
 
-type ActiveTab = 'chat' | 'documents';
-
 export const DashboardPage: React.FC = () => {
-  // ─── Document State ───────────────────────────────────────────────────────────
-  const [documents, setDocuments] = useState<DocumentItem[]>([]);
-  const [totalCount, setTotalCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
-  const [alert, setAlert] = useState<{ type: 'error' | 'success'; message: string } | null>(null);
+  const {
+    activeTab,
+    setActiveTab,
+    isUploadModalOpen,
+    setIsUploadModalOpen,
+    setTotalDocCount,
+  } = useDashboard();
 
-  // ─── RAG / Chat State ─────────────────────────────────────────────────────────
+  // Document State
+  const [documents, setDocuments] = useState<DocumentItem[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // RAG / Chat State
   const [isQuerying, setIsQuerying] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+
   const {
     conversations,
     activeConversationId,
@@ -49,50 +58,58 @@ export const DashboardPage: React.FC = () => {
     clearConversations,
   } = useConversations();
 
-  // ─── Layout State ─────────────────────────────────────────────────────────────
-  const [activeTab, setActiveTab] = useState<ActiveTab>('chat');
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  // Fetch Documents
+  const fetchDocuments = useCallback(async (isManualRefresh = false) => {
+    if (isManualRefresh) setIsRefreshing(true);
+    else setLoading(true);
 
-  // ─── Document Fetching ────────────────────────────────────────────────────────
-  const fetchDocuments = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await documentService.listDocuments();
-      setDocuments(res.items || []);
-      setTotalCount(res.total || 0);
+      const items = res.items || [];
+      setDocuments(items);
+      setTotalDocCount(res.total || items.length);
     } catch (err: any) {
-      setAlert({ type: 'error', message: err.message || 'Failed to load documents' });
+      setNotification({ type: 'error', message: err.message || 'Failed to fetch documents' });
     } finally {
       setLoading(false);
+      setIsRefreshing(false);
     }
-  }, []);
+  }, [setTotalDocCount]);
 
   useEffect(() => {
     fetchDocuments();
   }, [fetchDocuments]);
 
+  // Upload handler
   const handleUploadSuccess = (newDoc: DocumentItem) => {
-    setDocuments((prev) => [newDoc, ...prev]);
-    setTotalCount((prev) => prev + 1);
-    setAlert({
+    setDocuments((prev) => {
+      const next = [newDoc, ...prev];
+      setTotalDocCount(next.length);
+      return next;
+    });
+    setNotification({
       type: 'success',
-      message: `"${newDoc.filename}" uploaded and queued for processing.`,
+      message: `"${newDoc.filename}" uploaded successfully.`,
     });
     setActiveTab('documents');
   };
 
+  // Delete handler
   const handleDelete = async (docId: string) => {
     await documentService.deleteDocument(docId);
-    setDocuments((prev) => prev.filter((d) => d.id !== docId));
-    setTotalCount((prev) => Math.max(0, prev - 1));
-    setAlert({ type: 'success', message: 'Document deleted.' });
+    setDocuments((prev) => {
+      const next = prev.filter((d) => d.id !== docId);
+      setTotalDocCount(next.length);
+      return next;
+    });
+    setNotification({ type: 'success', message: 'Document deleted from workspace.' });
   };
 
   const handleStatusChange = useCallback((id: string, updated: DocumentItem) => {
     setDocuments((prev) => prev.map((d) => (d.id === id ? updated : d)));
   }, []);
 
-  // ─── Chat Handler ─────────────────────────────────────────────────────────────
+  // Chat Query Handler
   const handleSendMessage = async (
     text: string,
     scope: 'all' | 'selected',
@@ -141,255 +158,251 @@ export const DashboardPage: React.FC = () => {
     setActiveTab('chat');
   };
 
-  // ─── Derived Values ────────────────────────────────────────────────────────────
+  // Derived Values
   const filteredDocs = documents.filter((doc) =>
     doc.filename.toLowerCase().includes(searchQuery.toLowerCase())
   );
-
   const totalBytes = documents.reduce((acc, d) => acc + (d.file_size || 0), 0);
   const readyCount = documents.filter((d) => d.status === 'ready').length;
 
   return (
-    <div className="flex flex-col h-full gap-0 animate-fadeIn">
-      {/* Alert Banner */}
-      {alert && (
-        <div className="mb-4">
-          <Alert type={alert.type} message={alert.message} onClose={() => setAlert(null)} />
-        </div>
-      )}
-
-      {/* Metrics Row */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-        <div className="glass-panel p-4 rounded-xl border border-slate-800 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-            <Files className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="text-lg font-bold text-white leading-none">{totalCount}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Documents</div>
-          </div>
-        </div>
-
-        <div className="glass-panel p-4 rounded-xl border border-slate-800 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-400 flex items-center justify-center shrink-0">
-            <HardDrive className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="text-lg font-bold text-white leading-none">{formatFileSize(totalBytes)}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Storage</div>
-          </div>
-        </div>
-
-        <div className="glass-panel p-4 rounded-xl border border-slate-800 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-teal-500/10 border border-teal-500/20 text-teal-400 flex items-center justify-center shrink-0">
-            <Layers className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="text-lg font-bold text-white leading-none">{readyCount}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">RAG Ready</div>
-          </div>
-        </div>
-
-        <div className="glass-panel p-4 rounded-xl border border-slate-800 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-lg bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center shrink-0">
-            <MessageSquare className="w-4 h-4" />
-          </div>
-          <div>
-            <div className="text-lg font-bold text-white leading-none">{conversations.length}</div>
-            <div className="text-[11px] text-slate-400 mt-0.5">Conversations</div>
-          </div>
-        </div>
-      </div>
-
-      {/* Main Panel: Sidebar + Content */}
-      <div className="flex flex-1 gap-4 min-h-0" style={{ height: 'calc(100vh - 260px)' }}>
-        {/* Conversation Sidebar */}
-        <div
-          className={`glass-panel border border-slate-800 rounded-2xl transition-all duration-300 overflow-hidden flex flex-col ${
-            sidebarCollapsed ? 'w-12' : 'w-64'
-          } shrink-0`}
-        >
-          {sidebarCollapsed ? (
-            <div className="flex flex-col items-center pt-4 gap-3">
-              <button
-                onClick={() => setSidebarCollapsed(false)}
-                className="p-2 text-slate-400 hover:text-white hover:bg-slate-800 rounded-lg transition-colors"
-                title="Expand sidebar"
-              >
-                <ChevronRight className="w-4 h-4" />
-              </button>
-              <button
-                onClick={handleNewConversation}
-                className="p-2 text-emerald-400 hover:text-emerald-300 hover:bg-emerald-500/10 rounded-lg transition-colors"
-                title="New conversation"
-              >
-                <MessageSquare className="w-4 h-4" />
-              </button>
+    <div className="flex flex-col h-full gap-4">
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className={`flex items-center justify-between p-3 rounded-xl border text-xs font-medium ${
+              notification.type === 'success'
+                ? 'border-success/30 bg-success-tint text-success'
+                : 'border-danger/30 bg-danger-tint text-danger'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {notification.type === 'success' ? (
+                <CheckCircle2 className="w-4 h-4" />
+              ) : (
+                <AlertCircle className="w-4 h-4" />
+              )}
+              <span>{notification.message}</span>
             </div>
-          ) : (
-            <div className="flex flex-col h-full p-3">
-              <div className="flex items-center justify-between mb-3 pb-2 border-b border-slate-800">
-                <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
-                  History
-                </span>
+            <button
+              onClick={() => setNotification(null)}
+              className="text-[11px] underline ml-4 hover:opacity-80"
+            >
+              Dismiss
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Main Workspace Layout */}
+      {activeTab === 'chat' ? (
+        <div className="flex flex-1 gap-4 min-h-0">
+          {/* Collapsible Left History Drawer */}
+          <motion.div
+            initial={false}
+            animate={{ width: sidebarCollapsed ? 56 : 280 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
+            className="rounded-2xl border border-border bg-surface shadow-level1 p-3 flex flex-col shrink-0 overflow-hidden"
+          >
+            {sidebarCollapsed ? (
+              <div className="flex flex-col items-center gap-3 pt-1">
                 <button
-                  onClick={() => setSidebarCollapsed(true)}
-                  className="p-1 text-slate-500 hover:text-white rounded-lg transition-colors"
-                  title="Collapse sidebar"
+                  onClick={() => setSidebarCollapsed(false)}
+                  className="p-2 rounded-lg hover:bg-surface-2 text-text-secondary hover:text-text-main transition-colors"
+                  title="Expand sidebar"
                 >
-                  <ChevronLeft className="w-3.5 h-3.5" />
+                  <ChevronRight className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={handleNewConversation}
+                  className="p-2 rounded-lg bg-accent-tint text-accent hover:bg-accent/20 transition-colors"
+                  title="New conversation"
+                >
+                  <MessageSquare className="w-4 h-4" />
                 </button>
               </div>
-              <div className="flex-1 overflow-hidden">
-                <ConversationSidebar
-                  conversations={conversations}
-                  activeConversationId={activeConversationId}
-                  onSelect={(id) => {
-                    selectConversation(id);
-                    setActiveTab('chat');
-                  }}
-                  onCreate={handleNewConversation}
-                  onDelete={deleteConversation}
-                  onClearAll={clearConversations}
-                />
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Right Panel */}
-        <div className="flex-1 min-w-0 flex flex-col glass-panel border border-slate-800 rounded-2xl overflow-hidden">
-          {/* Tab Bar */}
-          <div className="flex items-center gap-1 px-4 py-3 border-b border-slate-800/80 shrink-0">
-            <button
-              onClick={() => setActiveTab('chat')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                activeTab === 'chat'
-                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <MessageSquare className="w-3.5 h-3.5" />
-              Chat
-            </button>
-            <button
-              onClick={() => setActiveTab('documents')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
-                activeTab === 'documents'
-                  ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
-                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
-              }`}
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              Documents
-              {totalCount > 0 && (
-                <span className="px-1.5 py-0.5 rounded-full bg-slate-800 text-slate-400 text-[10px] font-mono">
-                  {totalCount}
-                </span>
-              )}
-            </button>
-
-            {/* Spacer */}
-            <div className="flex-1" />
-
-            {activeTab === 'documents' && (
-              <button
-                onClick={() => setIsUploadModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs font-semibold rounded-lg shadow-lg shadow-emerald-500/20 transition-all hover:scale-[1.02]"
-              >
-                <Plus className="w-3.5 h-3.5" />
-                Upload
-              </button>
-            )}
-          </div>
-
-          {/* Tab Content */}
-          <div className="flex-1 min-h-0 overflow-hidden">
-            {activeTab === 'chat' ? (
-              <ChatPanel
-                conversation={activeConversation}
-                documents={documents}
-                isQuerying={isQuerying}
-                onSendMessage={handleSendMessage}
-                onUpdateScope={(scope, selectedIds) => {
-                  if (activeConversationId) {
-                    updateDocumentScope(activeConversationId, scope, selectedIds);
-                  }
-                }}
-              />
             ) : (
-              /* Documents Tab */
-              <div className="h-full overflow-y-auto p-4">
-                {/* Search + refresh bar */}
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="relative flex-1">
-                    <Search className="w-3.5 h-3.5 text-slate-500 absolute left-3 top-1/2 -translate-y-1/2" />
-                    <input
-                      type="text"
-                      placeholder="Search documents…"
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      className="w-full pl-9 pr-4 py-2 bg-slate-950 border border-slate-800 rounded-lg text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 transition-all"
-                    />
-                  </div>
+              <div className="flex flex-col h-full">
+                <div className="flex items-center justify-between pb-2 mb-2 border-b border-border">
+                  <span className="text-xs font-semibold text-text-main">Threads</span>
                   <button
-                    onClick={fetchDocuments}
-                    disabled={loading}
-                    className="p-2 text-slate-400 hover:text-white bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-lg transition-colors"
-                    title="Refresh"
+                    onClick={() => setSidebarCollapsed(true)}
+                    className="p-1 rounded-md text-text-secondary hover:text-text-main hover:bg-surface-2 transition-colors"
+                    title="Collapse sidebar"
                   >
-                    <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
+                    <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
                 </div>
 
-                {/* Document Grid */}
-                {loading ? (
-                  <div className="py-16 flex flex-col items-center gap-3">
-                    <Spinner size="lg" />
-                    <p className="text-xs text-slate-500">Loading documents…</p>
-                  </div>
-                ) : filteredDocs.length === 0 ? (
-                  <div className="py-12 text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600 mx-auto mb-3">
-                      <Files className="w-6 h-6" />
-                    </div>
-                    <h3 className="text-sm font-semibold text-white">
-                      {searchQuery ? 'No results found' : 'No documents yet'}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-1.5 max-w-xs mx-auto leading-relaxed">
-                      {searchQuery
-                        ? `No document matches "${searchQuery}".`
-                        : 'Upload PDF, TXT, DOCX, or Markdown files to start building your knowledge base.'}
-                    </p>
-                    {!searchQuery && (
-                      <button
-                        onClick={() => setIsUploadModalOpen(true)}
-                        className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg shadow-lg transition-all"
-                      >
-                        <Plus className="w-4 h-4" />
-                        Upload Document
-                      </button>
-                    )}
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-3">
-                    {filteredDocs.map((doc) => (
+                <div className="flex-1 overflow-hidden">
+                  <ConversationSidebar
+                    conversations={conversations}
+                    activeConversationId={activeConversationId}
+                    onSelect={(id) => selectConversation(id)}
+                    onCreate={handleNewConversation}
+                    onDelete={deleteConversation}
+                    onClearAll={clearConversations}
+                  />
+                </div>
+              </div>
+            )}
+          </motion.div>
+
+          {/* Chat Workspace */}
+          <div className="flex-1 min-w-0 h-full">
+            <ChatPanel
+              conversation={activeConversation}
+              documents={documents.filter((d) => d.status === 'ready')}
+              isQuerying={isQuerying}
+              onSendMessage={handleSendMessage}
+              onUpdateScope={(s, ids) => {
+                if (activeConversationId) {
+                  updateDocumentScope(activeConversationId, s, ids);
+                }
+              }}
+            />
+          </div>
+        </div>
+      ) : (
+        /* Documents Management View */
+        <div className="flex flex-col flex-1 gap-4 overflow-y-auto pr-1">
+          {/* 3 Metric Stat Cards with Status Top Borders */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {/* Total Documents */}
+            <div className="rounded-xl border border-border border-t-2 border-t-accent bg-surface p-4 shadow-level1 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-medium text-text-secondary">Total Documents</span>
+                <div className="text-2xl font-bold font-mono text-text-main mt-0.5">
+                  {documents.length}
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-accent-tint text-accent flex items-center justify-center">
+                <Files className="w-4 h-4" />
+              </div>
+            </div>
+
+            {/* Ready for RAG */}
+            <div className="rounded-xl border border-border border-t-2 border-t-success bg-surface p-4 shadow-level1 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-medium text-text-secondary">Ready for RAG</span>
+                <div className="text-2xl font-bold font-mono text-success mt-0.5">
+                  {readyCount}
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-success-tint text-success flex items-center justify-center">
+                <Layers className="w-4 h-4" />
+              </div>
+            </div>
+
+            {/* Storage Used */}
+            <div className="rounded-xl border border-border border-t-2 border-t-warning bg-surface p-4 shadow-level1 flex items-center justify-between">
+              <div>
+                <span className="text-[11px] font-medium text-text-secondary">Storage Used</span>
+                <div className="text-2xl font-bold font-mono text-text-main mt-0.5">
+                  {formatFileSize(totalBytes)}
+                </div>
+              </div>
+              <div className="w-9 h-9 rounded-lg bg-warning-tint text-warning flex items-center justify-center">
+                <HardDrive className="w-4 h-4" />
+              </div>
+            </div>
+          </div>
+
+          {/* Search + Action Control Bar */}
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-text-secondary absolute left-3.5 top-3" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search documents by name..."
+                className="w-full h-10 pl-10 pr-4 bg-surface border border-border rounded-xl text-xs text-text-main placeholder-text-secondary/60 focus:border-accent transition-all shadow-level1"
+              />
+            </div>
+
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="h-10 px-4 rounded-xl bg-accent text-white text-xs font-medium flex items-center gap-2 hover:bg-accent-hover transition-colors shadow-sm shrink-0"
+            >
+              <UploadCloud className="w-4 h-4" />
+              <span>Upload Document</span>
+            </button>
+
+            <button
+              onClick={() => fetchDocuments(true)}
+              disabled={isRefreshing}
+              className="h-10 w-10 rounded-xl border border-border bg-surface hover:bg-surface-2 text-text-secondary hover:text-text-main flex items-center justify-center transition-colors shadow-level1 shrink-0"
+              title="Refresh list"
+            >
+              <RotateCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin text-accent' : ''}`} />
+            </button>
+          </div>
+
+          {/* 3-Column Document Grid */}
+          <div className="flex-1">
+            {loading ? (
+              <div className="py-16 flex flex-col items-center justify-center text-center">
+                <Spinner size="lg" />
+                <p className="text-xs text-text-secondary mt-3">Loading workspace documents...</p>
+              </div>
+            ) : filteredDocs.length === 0 ? (
+              <div className="py-16 text-center rounded-2xl border border-dashed border-border bg-surface/50 p-8">
+                <div className="w-12 h-12 rounded-full bg-surface-2 border border-border flex items-center justify-center text-text-secondary mx-auto mb-3">
+                  <Files className="w-6 h-6" />
+                </div>
+                <h3 className="text-sm font-semibold text-text-main">
+                  {searchQuery ? 'No matching documents found' : 'No documents uploaded yet'}
+                </h3>
+                <p className="text-xs text-text-secondary mt-1 max-w-sm mx-auto">
+                  {searchQuery
+                    ? 'Try searching with a different keyword.'
+                    : 'Upload PDF, DOCX, TXT, or Markdown documents to start chatting.'}
+                </p>
+                {!searchQuery && (
+                  <button
+                    onClick={() => setIsUploadModalOpen(true)}
+                    className="mt-4 px-4 py-2 rounded-lg bg-accent text-white text-xs font-medium inline-flex items-center gap-2 hover:bg-accent-hover transition-colors"
+                  >
+                    <UploadCloud className="w-3.5 h-3.5" />
+                    <span>Upload your first document</span>
+                  </button>
+                )}
+              </div>
+            ) : (
+              <motion.div
+                layout
+                className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5"
+              >
+                <AnimatePresence>
+                  {filteredDocs.map((doc) => (
+                    <motion.div
+                      key={doc.id}
+                      layout
+                      initial={{ opacity: 0, y: 8 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.18 }}
+                    >
                       <DocumentCard
-                        key={doc.id}
                         document={doc}
                         onDelete={handleDelete}
                         onStatusChange={handleStatusChange}
                       />
-                    ))}
-                  </div>
-                )}
-              </div>
+                    </motion.div>
+                  ))}
+                </AnimatePresence>
+              </motion.div>
             )}
           </div>
         </div>
-      </div>
+      )}
 
-      {/* Upload Modal */}
+      {/* Global Upload Modal */}
       <DocumentUploadModal
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}

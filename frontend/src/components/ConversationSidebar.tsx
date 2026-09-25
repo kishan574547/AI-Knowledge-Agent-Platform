@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { MessageSquarePlus, Trash2, MessageSquare, ChevronRight, Clock, Eraser } from 'lucide-react';
+import { Plus, Trash2, MessageSquare } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Conversation } from '../types/conversation';
 
 interface ConversationSidebarProps {
@@ -31,89 +32,105 @@ export const ConversationSidebar: React.FC<ConversationSidebarProps> = ({
 }) => {
   const [hoveredId, setHoveredId] = useState<string | null>(null);
 
-  return (
-    <aside className="flex flex-col h-full">
-      {/* Header */}
-      <div className="flex items-center justify-between mb-4 px-1">
-        <h2 className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-          Conversations
-        </h2>
-        {conversations.length > 0 && (
-          <button
-            onClick={onClearAll}
-            title="Clear all conversations"
-            className="p-1.5 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-colors"
-          >
-            <Eraser className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
+  const handleClearAll = () => {
+    if (confirm('Clear all conversation history?')) {
+      onClearAll();
+    }
+  };
 
-      {/* New Conversation Button */}
+  return (
+    <aside className="flex flex-col h-full select-none">
+      {/* Top Action */}
       <button
         onClick={onCreate}
-        className="flex items-center gap-2.5 w-full px-3 py-2.5 mb-3 bg-gradient-to-r from-emerald-600/20 to-teal-600/20 hover:from-emerald-600/30 hover:to-teal-600/30 border border-emerald-500/30 rounded-xl text-emerald-400 text-xs font-semibold transition-all hover:scale-[1.01] group"
+        className="flex items-center justify-center gap-2 w-full h-9 mb-3 rounded-lg border border-border bg-surface hover:bg-surface-2 hover:border-accent/60 text-text-main text-xs font-medium transition-all"
       >
-        <MessageSquarePlus className="w-4 h-4 group-hover:scale-110 transition-transform" />
-        New Conversation
+        <Plus className="w-3.5 h-3.5 text-accent" />
+        <span>New thread</span>
       </button>
 
       {/* Conversation List */}
-      <div className="flex-1 overflow-y-auto space-y-1 pr-0.5">
+      <div className="flex-1 overflow-y-auto space-y-1 pr-1">
         {conversations.length === 0 ? (
-          <div className="py-8 text-center">
-            <MessageSquare className="w-8 h-8 text-slate-700 mx-auto mb-2" />
-            <p className="text-xs text-slate-500">No conversations yet.</p>
-            <p className="text-[11px] text-slate-600 mt-1">Start one to ask questions.</p>
+          <div className="py-10 text-center px-2">
+            <MessageSquare className="w-6 h-6 text-text-secondary/40 mx-auto mb-2" />
+            <p className="text-xs text-text-secondary">No conversations yet</p>
+            <p className="text-[11px] text-text-secondary/70 mt-0.5">
+              Ask a question to start exploring your documents.
+            </p>
           </div>
         ) : (
-          conversations.map((conv) => {
-            const isActive = conv.id === activeConversationId;
-            return (
-              <div
-                key={conv.id}
-                className={`group relative flex items-start gap-2 px-3 py-2.5 rounded-xl cursor-pointer transition-all duration-150 ${
-                  isActive
-                    ? 'bg-emerald-500/10 border border-emerald-500/30 text-white'
-                    : 'hover:bg-slate-800/60 border border-transparent text-slate-300 hover:text-white'
-                }`}
-                onClick={() => onSelect(conv.id)}
-                onMouseEnter={() => setHoveredId(conv.id)}
-                onMouseLeave={() => setHoveredId(null)}
-              >
-                <MessageSquare
-                  className={`w-3.5 h-3.5 mt-0.5 shrink-0 ${isActive ? 'text-emerald-400' : 'text-slate-500 group-hover:text-slate-400'}`}
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-medium leading-snug truncate">{conv.title}</p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <Clock className="w-2.5 h-2.5 text-slate-500" />
-                    <span className="text-[10px] text-slate-500">{timeAgo(conv.updatedAt)}</span>
-                    {conv.messages.length > 0 && (
-                      <span className="text-[10px] text-slate-600">
-                        · {conv.messages.length} msg{conv.messages.length !== 1 ? 's' : ''}
-                      </span>
-                    )}
+          <AnimatePresence initial={false}>
+            {conversations.map((conv) => {
+              const isActive = conv.id === activeConversationId;
+              return (
+                <motion.div
+                  key={conv.id}
+                  layout
+                  initial={{ opacity: 0, y: 4 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, height: 0, overflow: 'hidden' }}
+                  transition={{ duration: 0.15 }}
+                  className={`group relative flex items-center justify-between gap-2 px-3 py-2 rounded-lg cursor-pointer transition-all ${
+                    isActive
+                      ? 'bg-surface-2 text-text-main font-medium border border-border'
+                      : 'hover:bg-surface-2/60 text-text-secondary hover:text-text-main'
+                  }`}
+                  onClick={() => onSelect(conv.id)}
+                  onMouseEnter={() => setHoveredId(conv.id)}
+                  onMouseLeave={() => setHoveredId(null)}
+                >
+                  {/* Left Active Indicator Bar */}
+                  {isActive && (
+                    <motion.div
+                      layoutId="activeConvLeftBar"
+                      className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-accent rounded-r"
+                    />
+                  )}
+
+                  <div className="min-w-0 flex-1 pl-1">
+                    <p className="text-xs truncate leading-snug">{conv.title}</p>
+                    <div className="flex items-center gap-1.5 mt-0.5 text-[10px] font-mono text-text-secondary">
+                      <span>{timeAgo(conv.updatedAt)}</span>
+                      {conv.messages.length > 0 && (
+                        <>
+                          <span>·</span>
+                          <span>{conv.messages.length} msg{conv.messages.length !== 1 ? 's' : ''}</span>
+                        </>
+                      )}
+                    </div>
                   </div>
-                </div>
-                {isActive && <ChevronRight className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />}
-                {!isActive && hoveredId === conv.id && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(conv.id);
-                    }}
-                    className="p-1 text-slate-500 hover:text-red-400 hover:bg-red-500/10 rounded-md transition-colors shrink-0"
-                    title="Delete conversation"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </button>
-                )}
-              </div>
-            );
-          })
+
+                  {hoveredId === conv.id && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDelete(conv.id);
+                      }}
+                      className="p-1 rounded text-text-secondary hover:text-danger hover:bg-danger-tint transition-colors shrink-0"
+                      title="Delete thread"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </motion.div>
+              );
+            })}
+          </AnimatePresence>
         )}
       </div>
+
+      {/* Footer Clear All */}
+      {conversations.length > 0 && (
+        <div className="pt-2 border-t border-border mt-auto">
+          <button
+            onClick={handleClearAll}
+            className="w-full py-1.5 text-center text-[11px] text-text-secondary hover:text-danger transition-colors"
+          >
+            Clear history
+          </button>
+        </div>
+      )}
     </aside>
   );
 };

@@ -1,17 +1,15 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Send,
-  Bot,
   User,
-  BookOpen,
-  AlertCircle,
-  Sparkles,
-  MessageSquare,
   ChevronDown,
-  Files,
-  CheckSquare,
-  Square,
+  Check,
+  Filter,
+  Sparkles,
+  FileText,
+  AlertCircle,
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMessage, Conversation } from '../types/conversation';
 import { DocumentItem } from '../types/document';
 import { Spinner } from './Spinner';
@@ -26,6 +24,7 @@ interface ChatPanelProps {
     selectedIds: string[]
   ) => void;
   onUpdateScope: (scope: 'all' | 'selected', selectedIds: string[]) => void;
+  onRenameTitle?: (title: string) => void;
 }
 
 function formatTime(iso: string) {
@@ -36,113 +35,145 @@ function formatTime(iso: string) {
   }
 }
 
+// User Bubble Component
 const UserBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => (
-  <div className="flex items-start gap-3 justify-end group animate-fadeIn">
-    <div className="max-w-[75%]">
-      <div className="bg-gradient-to-br from-emerald-600 to-teal-700 text-white text-sm px-4 py-3 rounded-2xl rounded-tr-sm shadow-lg">
+  <motion.div
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.2 }}
+    className="flex items-start gap-2.5 justify-end"
+  >
+    <div className="max-w-[80%]">
+      <div className="bg-accent text-white text-sm px-4 py-2.5 rounded-2xl rounded-tr-sm shadow-sm">
         <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
       </div>
       <div className="text-right mt-1">
-        <span className="text-[10px] text-slate-500">{formatTime(msg.timestamp)}</span>
+        <span className="text-[10px] font-mono text-text-secondary">{formatTime(msg.timestamp)}</span>
       </div>
     </div>
-    <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-600 flex items-center justify-center text-white shrink-0 mt-0.5 shadow-md">
-      <User className="w-4 h-4" />
+    <div className="w-7 h-7 rounded-full bg-surface-2 border border-border flex items-center justify-center text-text-secondary shrink-0 mt-0.5">
+      <User className="w-3.5 h-3.5" />
     </div>
-  </div>
+  </motion.div>
 );
 
+// Assistant Bubble Component with Smooth Sources Accordion
 const AssistantBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
   const [showSources, setShowSources] = useState(false);
   const hasSources = msg.sources && msg.sources.length > 0;
 
   return (
-    <div className="flex items-start gap-3 animate-fadeIn">
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="flex items-start gap-2.5"
+    >
       <div
-        className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-md ${
+        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
           msg.isError
-            ? 'bg-red-500/20 border border-red-500/30'
-            : 'bg-slate-800 border border-slate-700'
+            ? 'bg-danger-tint border border-danger text-danger'
+            : 'bg-surface-2 border border-border text-text-main'
         }`}
       >
         {msg.isError ? (
-          <AlertCircle className="w-4 h-4 text-red-400" />
+          <AlertCircle className="w-3.5 h-3.5" />
         ) : (
-          <Bot className="w-4 h-4 text-emerald-400" />
+          <div className="w-2.5 h-2.5 rounded-sm bg-accent" />
         )}
       </div>
-      <div className="max-w-[80%]">
+
+      <div className="max-w-[85%] space-y-2">
         <div
-          className={`px-4 py-3 rounded-2xl rounded-tl-sm shadow-sm border ${
+          className={`px-4 py-3 rounded-2xl rounded-tl-sm text-sm border ${
             msg.isError
-              ? 'bg-red-500/5 border-red-500/20 text-red-300'
-              : 'bg-slate-800/80 border-slate-700/60 text-slate-100'
+              ? 'bg-danger-tint border-danger/30 text-danger'
+              : 'bg-surface border-border text-text-main shadow-level1'
           }`}
         >
-          <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
+          <div className="leading-relaxed whitespace-pre-wrap break-words">{msg.content}</div>
         </div>
 
-        {/* Sources */}
+        {/* Sources Accordion */}
         {hasSources && (
-          <div className="mt-2">
+          <div className="pt-0.5">
             <button
-              onClick={() => setShowSources((s) => !s)}
-              className="flex items-center gap-1.5 text-[11px] text-slate-400 hover:text-emerald-400 transition-colors"
+              onClick={() => setShowSources(!showSources)}
+              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-surface-2 hover:bg-border/60 text-[11px] font-medium text-text-secondary hover:text-text-main transition-colors border border-border"
             >
-              <BookOpen className="w-3 h-3" />
-              <span>
-                {msg.sources!.length} source{msg.sources!.length !== 1 ? 's' : ''}
-              </span>
+              <span>{msg.sources!.length} verified source{msg.sources!.length !== 1 ? 's' : ''}</span>
               <ChevronDown
-                className={`w-3 h-3 transition-transform ${showSources ? 'rotate-180' : ''}`}
+                className={`w-3 h-3 transition-transform duration-200 ${showSources ? 'rotate-180' : ''}`}
               />
             </button>
-            {showSources && (
-              <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {msg.sources!.map((src, i) => (
-                  <div
-                    key={i}
-                    className="px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700/60 text-xs flex items-start justify-between gap-2"
-                  >
-                    <div className="min-w-0">
-                      <p className="font-medium text-slate-200 truncate" title={src.filename}>
-                        {src.filename}
-                      </p>
-                      <p className="text-slate-500 mt-0.5">
-                        {src.page ? `Page ${src.page}` : `Chunk ${src.chunk_index}`}
-                      </p>
+
+            <AnimatePresence>
+              {showSources && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2, ease: 'easeOut' }}
+                  className="overflow-hidden mt-2 space-y-1.5"
+                >
+                  {msg.sources!.map((s, idx) => (
+                    <div
+                      key={idx}
+                      className="p-2 rounded-lg bg-surface border border-border flex items-center justify-between gap-3 text-xs"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <FileText className="w-3.5 h-3.5 text-accent shrink-0" />
+                        <span className="font-medium text-text-main truncate max-w-[240px]">
+                          {s.filename}
+                        </span>
+                        {s.page !== undefined && s.page !== null && (
+                          <span className="text-[10px] font-mono text-text-secondary">
+                            p.{s.page}
+                          </span>
+                        )}
+                        <span className="text-[10px] font-mono text-text-secondary">
+                          chunk #{s.chunk_index}
+                        </span>
+                      </div>
+
+                      {s.similarity !== undefined && (
+                        <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 rounded bg-surface-2 text-text-muted shrink-0">
+                          {Math.round(s.similarity * 100)}% match
+                        </span>
+                      )}
                     </div>
-                    <span className="shrink-0 px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 font-mono text-[10px] border border-emerald-500/20">
-                      {Math.round(src.similarity * 100)}%
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
+                  ))}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
-        <div className="mt-1">
-          <span className="text-[10px] text-slate-500">{formatTime(msg.timestamp)}</span>
+        <div className="text-[10px] font-mono text-text-secondary">
+          {formatTime(msg.timestamp)}
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 };
 
-const TypingIndicator: React.FC = () => (
-  <div className="flex items-start gap-3 animate-fadeIn">
-    <div className="w-8 h-8 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center shrink-0 shadow-md">
-      <Bot className="w-4 h-4 text-emerald-400" />
+// Shimmer Thinking Skeleton
+const ThinkingSkeleton: React.FC = () => (
+  <motion.div
+    initial={{ opacity: 0, y: 6 }}
+    animate={{ opacity: 1, y: 0 }}
+    className="flex items-start gap-2.5"
+  >
+    <div className="w-7 h-7 rounded-full bg-surface-2 border border-border flex items-center justify-center shrink-0 mt-0.5">
+      <div className="w-2 h-2 rounded-sm bg-accent animate-pulse" />
     </div>
-    <div className="px-4 py-3 rounded-2xl rounded-tl-sm bg-slate-800/80 border border-slate-700/60">
-      <div className="flex items-center gap-1.5">
-        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:0ms]" />
-        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:150ms]" />
-        <span className="w-1.5 h-1.5 bg-emerald-400 rounded-full animate-bounce [animation-delay:300ms]" />
-      </div>
+    <div className="max-w-[70%] space-y-2 p-4 rounded-2xl rounded-tl-sm bg-surface border border-border shadow-level1">
+      <div className="h-3 w-48 rounded bg-surface-2 animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
+      <div className="h-3 w-64 rounded bg-surface-2 animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
+      <div className="h-3 w-32 rounded bg-surface-2 animate-shimmer" style={{ backgroundSize: '200% 100%' }} />
+      <p className="text-[11px] text-text-secondary mt-1">Searching documents and generating grounded answer…</p>
     </div>
-  </div>
+  </motion.div>
 );
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({
@@ -152,32 +183,36 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   onSendMessage,
   onUpdateScope,
 }) => {
-  const [inputText, setInputText] = useState('');
-  const [showDocPicker, setShowDocPicker] = useState(false);
-  const [localScope, setLocalScope] = useState<'all' | 'selected'>('all');
-  const [localSelectedIds, setLocalSelectedIds] = useState<string[]>([]);
-
+  const [input, setInput] = useState('');
+  const [scope, setScope] = useState<'all' | 'selected'>(conversation?.documentScope || 'all');
+  const [selectedIds, setSelectedIds] = useState<string[]>(conversation?.selectedDocumentIds || []);
+  const [isScopeMenuOpen, setIsScopeMenuOpen] = useState(false);
+  const scopeMenuRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // Sync scope from active conversation
-  useEffect(() => {
-    if (conversation) {
-      setLocalScope(conversation.documentScope);
-      setLocalSelectedIds(conversation.selectedDocumentIds);
-    }
-  }, [conversation?.id]);
-
-  // Scroll to bottom on new messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [conversation?.messages.length, isQuerying]);
+  }, [conversation?.messages, isQuerying]);
 
-  const handleSend = () => {
-    const text = inputText.trim();
-    if (!text || isQuerying) return;
-    setInputText('');
-    onSendMessage(text, localScope, localSelectedIds);
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (scopeMenuRef.current && !scopeMenuRef.current.contains(e.target as Node)) {
+        setIsScopeMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSend = (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!input.trim() || isQuerying) return;
+    onSendMessage(input.trim(), scope, selectedIds);
+    setInput('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
@@ -187,216 +222,199 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     }
   };
 
-  const toggleDocSelection = (id: string) => {
-    setLocalSelectedIds((prev) => {
-      const next = prev.includes(id) ? prev.filter((d) => d !== id) : [...prev, id];
-      return next;
-    });
+  const toggleDocument = (id: string) => {
+    const updated = selectedIds.includes(id)
+      ? selectedIds.filter((item) => item !== id)
+      : [...selectedIds, id];
+    setSelectedIds(updated);
+    onUpdateScope('selected', updated);
   };
 
-  const applyDocScope = () => {
-    if (conversation) {
-      onUpdateScope(localScope, localSelectedIds);
-    }
-    setShowDocPicker(false);
+  const selectAll = () => {
+    setScope('all');
+    setSelectedIds([]);
+    onUpdateScope('all', []);
+    setIsScopeMenuOpen(false);
   };
 
-  const readyDocs = documents.filter((d) => d.status === 'ready');
-
-  if (!conversation) {
-    return (
-      <div className="flex flex-col items-center justify-center h-full text-center py-16 px-6">
-        <div className="w-16 h-16 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-center text-slate-600 mb-4">
-          <MessageSquare className="w-8 h-8" />
-        </div>
-        <h3 className="text-base font-semibold text-slate-300">No Conversation Selected</h3>
-        <p className="text-xs text-slate-500 mt-2 max-w-xs leading-relaxed">
-          Create a new conversation or select an existing one from the sidebar to start asking
-          questions about your documents.
-        </p>
-      </div>
-    );
-  }
+  const suggestionChips = [
+    'Summarize this document',
+    'What are the key takeaways?',
+    'List any risks or requirements',
+    'Explain the main architecture',
+  ];
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Chat Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-800/80 shrink-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center">
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-          </div>
-          <div>
-            <p className="text-xs font-semibold text-white truncate max-w-[200px]" title={conversation.title}>
-              {conversation.title}
-            </p>
-            <p className="text-[10px] text-slate-500">Powered by Gemini + pgvector</p>
-          </div>
+    <div className="flex flex-col h-full rounded-2xl border border-border bg-surface shadow-level1 overflow-hidden">
+      {/* Header Bar */}
+      <div className="px-5 py-3 border-b border-border bg-surface flex items-center justify-between gap-4 shrink-0">
+        <div className="min-w-0">
+          <h2 className="text-sm font-semibold text-text-main truncate">
+            {conversation?.title || 'New Exploration'}
+          </h2>
+          <p className="text-[11px] text-text-secondary">
+            Answers are grounded in your uploaded documents
+          </p>
         </div>
 
-        {/* Scope Button */}
-        <div className="relative">
+        {/* Scope Selector Chip */}
+        <div className="relative" ref={scopeMenuRef}>
           <button
-            onClick={() => setShowDocPicker((s) => !s)}
-            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs border transition-colors ${
-              localScope === 'selected' && localSelectedIds.length > 0
-                ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-400'
-                : 'border-slate-700 bg-slate-900 text-slate-400 hover:text-white'
-            }`}
+            onClick={() => setIsScopeMenuOpen(!isScopeMenuOpen)}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-border/60 text-xs font-medium text-text-main transition-all"
           >
-            <Files className="w-3.5 h-3.5" />
+            <Filter className="w-3.5 h-3.5 text-accent" />
             <span>
-              {localScope === 'all'
-                ? 'All Documents'
-                : localSelectedIds.length === 0
-                ? 'Select Docs'
-                : `${localSelectedIds.length} selected`}
+              {scope === 'all'
+                ? 'All documents'
+                : `${selectedIds.length} selected`}
             </span>
-            <ChevronDown className={`w-3 h-3 transition-transform ${showDocPicker ? 'rotate-180' : ''}`} />
+            <ChevronDown className="w-3 h-3 text-text-secondary" />
           </button>
 
-          {showDocPicker && (
-            <div className="absolute right-0 top-9 z-30 w-72 glass-panel border border-slate-700 rounded-xl shadow-2xl overflow-hidden">
-              <div className="p-3 border-b border-slate-800">
-                <p className="text-xs font-semibold text-slate-300">Document Scope</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Choose which documents to search for answers.
-                </p>
-              </div>
-              <div className="p-3 space-y-2">
-                <label className="flex items-center gap-2.5 cursor-pointer group">
-                  <input
-                    type="radio"
-                    name="scope"
-                    checked={localScope === 'all'}
-                    onChange={() => setLocalScope('all')}
-                    className="accent-emerald-500"
-                  />
-                  <div>
-                    <p className="text-xs font-medium text-slate-200">All Documents</p>
-                    <p className="text-[11px] text-slate-500">Search across your entire knowledge base</p>
-                  </div>
-                </label>
-                <label className="flex items-center gap-2.5 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="scope"
-                    checked={localScope === 'selected'}
-                    onChange={() => setLocalScope('selected')}
-                    className="accent-emerald-500"
-                  />
-                  <div>
-                    <p className="text-xs font-medium text-slate-200">Selected Documents</p>
-                    <p className="text-[11px] text-slate-500">Narrow to specific documents only</p>
-                  </div>
-                </label>
-              </div>
+          <AnimatePresence>
+            {isScopeMenuOpen && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.96, y: 4 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.96, y: 4 }}
+                transition={{ duration: 0.15 }}
+                className="absolute right-0 mt-1.5 w-64 rounded-xl border border-border bg-surface shadow-level2 p-2 z-30"
+              >
+                <div className="p-1 text-[11px] font-semibold text-text-secondary uppercase">
+                  Context Scope
+                </div>
 
-              {localScope === 'selected' && (
-                <div className="px-3 pb-3 space-y-1 max-h-40 overflow-y-auto">
-                  {readyDocs.length === 0 ? (
-                    <p className="text-xs text-slate-500 text-center py-2">
-                      No ready documents available.
-                    </p>
+                <button
+                  onClick={selectAll}
+                  className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition-colors ${
+                    scope === 'all'
+                      ? 'bg-accent-tint text-accent font-medium'
+                      : 'hover:bg-surface-2 text-text-main'
+                  }`}
+                >
+                  <span>Search all workspace files</span>
+                  {scope === 'all' && <Check className="w-3.5 h-3.5" />}
+                </button>
+
+                <div className="my-1.5 border-t border-border" />
+
+                <div className="p-1 text-[11px] font-semibold text-text-secondary">
+                  Or pick specific files:
+                </div>
+
+                <div className="max-h-44 overflow-y-auto space-y-0.5">
+                  {documents.length === 0 ? (
+                    <div className="p-2 text-center text-xs text-text-secondary">
+                      No uploaded documents
+                    </div>
                   ) : (
-                    readyDocs.map((doc) => {
-                      const checked = localSelectedIds.includes(doc.id);
+                    documents.map((d) => {
+                      const isChecked = scope === 'selected' && selectedIds.includes(d.id);
                       return (
                         <button
-                          key={doc.id}
-                          onClick={() => toggleDocSelection(doc.id)}
-                          className="flex items-center gap-2 w-full px-2 py-1.5 rounded-lg hover:bg-slate-800 text-left transition-colors"
+                          key={d.id}
+                          onClick={() => {
+                            setScope('selected');
+                            toggleDocument(d.id);
+                          }}
+                          className="w-full flex items-center gap-2 p-1.5 rounded-md hover:bg-surface-2 text-left text-xs text-text-main"
                         >
-                          {checked ? (
-                            <CheckSquare className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                          ) : (
-                            <Square className="w-3.5 h-3.5 text-slate-500 shrink-0" />
-                          )}
-                          <span className="text-xs text-slate-300 truncate" title={doc.filename}>
-                            {doc.filename}
-                          </span>
+                          <div
+                            className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 ${
+                              isChecked
+                                ? 'bg-accent border-accent text-white'
+                                : 'border-border bg-surface'
+                            }`}
+                          >
+                            {isChecked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
+                          </div>
+                          <span className="truncate flex-1">{d.filename}</span>
                         </button>
                       );
                     })
                   )}
                 </div>
-              )}
-
-              <div className="px-3 py-2.5 border-t border-slate-800 flex justify-end">
-                <button
-                  onClick={applyDocScope}
-                  className="px-4 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold rounded-lg transition-colors"
-                >
-                  Apply
-                </button>
-              </div>
-            </div>
-          )}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      {/* Messages */}
-      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-5">
-        {conversation.messages.length === 0 ? (
-          <div className="flex flex-col items-center justify-center h-full text-center py-12">
-            <div className="w-12 h-12 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-3">
-              <Sparkles className="w-6 h-6" />
+      {/* Message Stream */}
+      <div className="flex-1 overflow-y-auto p-5 space-y-4">
+        {(!conversation || conversation.messages.length === 0) && (
+          <div className="h-full flex flex-col items-center justify-center text-center px-4 py-10">
+            <div className="w-10 h-10 rounded-full bg-surface-2 border border-border flex items-center justify-center text-accent mb-3">
+              <Sparkles className="w-5 h-5" />
             </div>
-            <p className="text-sm font-medium text-slate-300">Ask your first question</p>
-            <p className="text-xs text-slate-500 mt-1.5 max-w-xs leading-relaxed">
-              Questions are answered using verified content from your documents — no hallucination.
+            <h3 className="text-sm font-semibold text-text-main">
+              Ask anything about your documents
+            </h3>
+            <p className="text-xs text-text-secondary mt-1 max-w-sm">
+              Questions are matched against vector embeddings and answered directly from your verified source files.
             </p>
+
+            {/* Suggestion Chips */}
+            <div className="flex flex-wrap items-center justify-center gap-2 mt-6 max-w-lg">
+              {suggestionChips.map((chip, i) => (
+                <button
+                  key={i}
+                  onClick={() => {
+                    setInput(chip);
+                    textareaRef.current?.focus();
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-border bg-surface hover:bg-surface-2 hover:border-accent/60 text-xs text-text-main transition-all"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
           </div>
-        ) : (
-          conversation.messages.map((msg) =>
-            msg.role === 'user' ? (
-              <UserBubble key={msg.id} msg={msg} />
-            ) : (
-              <AssistantBubble key={msg.id} msg={msg} />
-            )
+        )}
+
+        {conversation?.messages.map((msg) =>
+          msg.role === 'user' ? (
+            <UserBubble key={msg.id} msg={msg} />
+          ) : (
+            <AssistantBubble key={msg.id} msg={msg} />
           )
         )}
 
-        {isQuerying && <TypingIndicator />}
+        {isQuerying && <ThinkingSkeleton />}
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div className="shrink-0 px-4 py-3 border-t border-slate-800/80">
-        <div className="flex items-end gap-2.5">
-          <div className="flex-1 relative">
-            <textarea
-              ref={inputRef}
-              rows={1}
-              value={inputText}
-              onChange={(e) => {
-                setInputText(e.target.value);
-                // auto-grow
-                e.target.style.height = 'auto';
-                e.target.style.height = Math.min(e.target.scrollHeight, 120) + 'px';
-              }}
-              onKeyDown={handleKeyDown}
-              placeholder="Ask a question about your documents… (Enter to send, Shift+Enter for newline)"
-              disabled={isQuerying}
-              className="w-full pl-4 pr-4 py-3 bg-slate-900 border border-slate-700 rounded-xl text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all resize-none disabled:opacity-60 leading-snug max-h-[120px]"
-            />
-          </div>
+      {/* Input Section (Sticky Bottom) */}
+      <div className="p-4 border-t border-border bg-surface shrink-0">
+        <form onSubmit={handleSend} className="relative">
+          <textarea
+            ref={textareaRef}
+            rows={1}
+            value={input}
+            onChange={(e) => {
+              setInput(e.target.value);
+              e.target.style.height = 'auto';
+              e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
+            }}
+            onKeyDown={handleKeyDown}
+            placeholder="Ask a question about your documents... (Enter to send, Shift+Enter for newline)"
+            className="w-full resize-none pl-4 pr-12 py-3 bg-surface-2 border border-border rounded-xl text-sm text-text-main placeholder-text-secondary/60 focus:bg-surface focus:border-accent transition-all leading-relaxed"
+          />
+
           <button
-            onClick={handleSend}
-            disabled={isQuerying || !inputText.trim()}
-            className="flex items-center justify-center w-10 h-10 bg-gradient-to-br from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl shadow-lg shadow-emerald-500/20 transition-all hover:scale-105 shrink-0"
-            title="Send message"
+            type="submit"
+            disabled={!input.trim() || isQuerying}
+            className="absolute right-2.5 top-2.5 w-8 h-8 rounded-lg bg-accent text-white flex items-center justify-center hover:bg-accent-hover disabled:opacity-40 disabled:hover:bg-accent transition-all"
+            title="Send question"
           >
-            {isQuerying ? (
-              <Spinner size="sm" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
+            {isQuerying ? <Spinner size="sm" /> : <Send className="w-3.5 h-3.5" />}
           </button>
+        </form>
+
+        <div className="mt-2 text-center text-[11px] text-text-secondary">
+          Every answer links back to the exact document and passage it came from.
         </div>
-        <p className="text-[10px] text-slate-600 mt-1.5 text-center">
-          Answers are grounded in your documents only — never hallucinated.
-        </p>
       </div>
     </div>
   );
