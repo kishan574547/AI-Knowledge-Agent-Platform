@@ -2,8 +2,11 @@
   "name": "ai-knowledge-agent-platform-root",
   "version": "1.0.0",
   "private": true,
+  "workspaces": [
+    "frontend"
+  ],
   "scripts": {
-    "build": "cd frontend && npm install && npm run build",
-    "dev": "cd frontend && npm run dev"
+    "build": "npm run build --workspace=frontend",
+    "dev": "npm run dev --workspace=frontend"
   }
 }
