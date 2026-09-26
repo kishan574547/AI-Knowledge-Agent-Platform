@@ -29,6 +29,7 @@ import { DocumentItem } from '../types/document';
 import { DocumentCard } from '../components/DocumentCard';
 import { DocumentUploadModal } from '../components/DocumentUploadModal';
 import { ConversationSidebar } from '../components/ConversationSidebar';
+import { ConversationHistoryDrawer } from '../components/ConversationHistoryDrawer';
 import { ChatPanel } from '../components/ChatPanel';
 import { Spinner } from '../components/Spinner';
 import { useConversations } from '../hooks/useConversations';
@@ -229,6 +230,7 @@ export const DashboardPage: React.FC = () => {
 
   const [isQuerying, setIsQuerying] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
+  const [isHistoryDrawerOpen, setIsHistoryDrawerOpen] = useState(false);
 
   const {
     conversations,
@@ -314,7 +316,9 @@ export const DashboardPage: React.FC = () => {
     selectedIds: string[]
   ) => {
     let convId = activeConversationId;
-    if (!convId) convId = createConversation();
+    if (!convId) {
+      convId = await createConversation();
+    }
 
     addUserMessage(convId, text);
     setIsQuerying(true);
@@ -344,8 +348,8 @@ export const DashboardPage: React.FC = () => {
     }
   };
 
-  const handleNewConversation = () => {
-    createConversation();
+  const handleNewConversation = async () => {
+    await createConversation();
     setActiveTab('chat');
   };
 
@@ -488,6 +492,8 @@ export const DashboardPage: React.FC = () => {
               documents={documents.filter((d) => d.status === 'ready')}
               isQuerying={isQuerying}
               onSendMessage={handleSendMessage}
+              onOpenHistory={() => setIsHistoryDrawerOpen(true)}
+              onNewChat={handleNewConversation}
               onUpdateScope={(s, ids) => {
                 if (activeConversationId) updateDocumentScope(activeConversationId, s, ids);
               }}
@@ -709,6 +715,16 @@ export const DashboardPage: React.FC = () => {
         isOpen={isUploadModalOpen}
         onClose={() => setIsUploadModalOpen(false)}
         onUploadSuccess={handleUploadSuccess}
+      />
+
+      {/* RAG Chat History Drawer */}
+      <ConversationHistoryDrawer
+        isOpen={isHistoryDrawerOpen}
+        onClose={() => setIsHistoryDrawerOpen(false)}
+        conversationType="rag"
+        activeConversationId={activeConversationId}
+        onSelectConversation={(id) => selectConversation(id)}
+        onNewChat={handleNewConversation}
       />
     </div>
   );

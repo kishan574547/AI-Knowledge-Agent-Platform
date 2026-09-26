@@ -12,9 +12,12 @@ import {
   UploadCloud,
   Clock,
   Sparkles,
+  Sun,
+  Moon,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDashboard } from '../context/DashboardContext';
+import { useTheme } from '../context/ThemeContext';
 
 type ActiveTab = 'chat' | 'documents';
 
@@ -37,8 +40,14 @@ interface AppSidebarProps {
 
 export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) => {
   const { activeTab, setActiveTab, setIsUploadModalOpen, totalDocCount } = useDashboard();
+  const { currentPreset, setTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+
+  const isDark = currentPreset.type === 'dark';
+  const toggleDarkLight = () => {
+    setTheme(isDark ? 'daylight' : 'midnight');
+  };
 
   const handleTabNav = (tab: ActiveTab) => {
     setActiveTab(tab);
@@ -78,8 +87,6 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
       icon: <Wrench className="w-4 h-4" />,
       type: 'route',
       route: '/mcp-tools',
-      badge: 'Soon',
-      badgeType: 'soon',
     },
     {
       id: 'multi-agent',
@@ -87,8 +94,6 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
       icon: <GitMerge className="w-4 h-4" />,
       type: 'route',
       route: '/multi-agent',
-      badge: 'Soon',
-      badgeType: 'soon',
     },
   ];
 
@@ -215,7 +220,7 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
       transition={{ type: 'spring', stiffness: 300, damping: 30 }}
       className="relative flex flex-col shrink-0 h-full bg-surface border-r border-border overflow-hidden"
     >
-      {/* Brand + collapse toggle */}
+      {/* ── ZONE 1: Brand header (always visible, never scrolls) ── */}
       <div className="flex items-center h-14 border-b border-border px-3 shrink-0">
         <AnimatePresence initial={false}>
           {!collapsed && (
@@ -230,12 +235,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
                 <Sparkles className="w-3.5 h-3.5" />
               </div>
               <div className="min-w-0">
-                <p className="font-heading text-xs font-bold text-text-main truncate leading-tight">
-                  AI Knowledge
-                </p>
-                <p className="text-[10px] text-text-muted truncate leading-tight">
-                  Agent Platform
-                </p>
+                <p className="font-heading text-xs font-bold text-text-main truncate leading-tight">AI Knowledge</p>
+                <p className="text-[10px] text-text-muted truncate leading-tight">Agent Platform</p>
               </div>
             </motion.div>
           )}
@@ -247,7 +248,6 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
           </div>
         )}
 
-        {/* Collapse toggle — only visible when expanded */}
         <AnimatePresence initial={false}>
           {!collapsed && (
             <motion.button
@@ -264,19 +264,19 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
         </AnimatePresence>
       </div>
 
-      {/* If collapsed, show toggle at bottom of brand row */}
+      {/* Expand toggle when collapsed */}
       {collapsed && (
         <button
           onClick={onToggle}
-          className="flex items-center justify-center py-2 text-text-muted hover:text-text-main hover:bg-surface-2 transition-colors border-b border-border"
+          className="flex items-center justify-center py-2 text-text-muted hover:text-text-main hover:bg-surface-2 transition-colors border-b border-border shrink-0"
           title="Expand sidebar"
         >
           <ChevronRight className="w-3.5 h-3.5" />
         </button>
       )}
 
-      {/* Upload shortcut */}
-      <div className="px-3 py-3 border-b border-border">
+      {/* ── ZONE 2: Upload button (always visible, never scrolls) ── */}
+      <div className="px-3 py-3 border-b border-border shrink-0">
         <motion.button
           whileHover={{ scale: 1.03 }}
           whileTap={{ scale: 0.97 }}
@@ -303,9 +303,8 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
         </motion.button>
       </div>
 
-      {/* Main navigation */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
-        {/* Section label */}
+      {/* ── ZONE 3: Scrollable nav (only this zone scrolls) ── */}
+      <nav className="flex-1 overflow-y-auto min-h-0 px-2 py-3 space-y-0.5 scrollbar-thin scrollbar-thumb-border scrollbar-track-transparent">
         <AnimatePresence initial={false}>
           {!collapsed && (
             <motion.p
@@ -318,13 +317,35 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
             </motion.p>
           )}
         </AnimatePresence>
-
         {navItems.map(renderItem)}
       </nav>
 
-      {/* Bottom: Settings */}
-      <div className="px-2 py-3 border-t border-border space-y-0.5">
+      {/* ── ZONE 4: Bottom fixed — Settings + Dark/Light (always visible) ── */}
+      <div className="px-2 py-3 border-t border-border space-y-0.5 shrink-0">
         {bottomItems.map(renderItem)}
+
+        <button
+          onClick={toggleDarkLight}
+          className="group relative flex items-center gap-3 px-3 py-2.5 rounded-xl w-full text-left transition-all duration-150 hover:bg-surface-2"
+          title={collapsed ? (isDark ? 'Switch to Light' : 'Switch to Dark') : undefined}
+        >
+          <span className="shrink-0 text-text-muted group-hover:text-text-main transition-colors">
+            {isDark ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+          </span>
+          <AnimatePresence initial={false}>
+            {!collapsed && (
+              <motion.span
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                transition={{ duration: 0.2, ease: 'easeOut' }}
+                className="text-xs font-semibold text-text-muted group-hover:text-text-main overflow-hidden whitespace-nowrap transition-colors"
+              >
+                {isDark ? 'Light Mode' : 'Dark Mode'}
+              </motion.span>
+            )}
+          </AnimatePresence>
+        </button>
       </div>
     </motion.aside>
   );

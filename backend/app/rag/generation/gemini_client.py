@@ -109,5 +109,53 @@ class GeminiClient:
         logger.error("All Gemini candidate models failed. Last error: %s", last_err)
         raise AppSecurityException("Error generating response from AI service. Please try again later.")
 
+    def generate_response(
+        self,
+        prompt: str,
+        system_instruction: Optional[str] = None,
+        temperature: float = 0.1,
+        max_tokens: int = 1500,
+    ) -> str:
+        """
+        Sends a prompt with custom system instructions to Google Gemini with model fallbacks.
+        """
+        client = self._get_client()
+        from google.genai import types
+
+        config = types.GenerateContentConfig(
+            system_instruction=system_instruction or SYSTEM_INSTRUCTION,
+            temperature=temperature,
+            max_output_tokens=max_tokens,
+        )
+
+        models_to_try = [
+            self.model,
+            "gemini-3.5-flash",
+            "gemini-3.5-flash-lite",
+            "gemini-3.6-flash",
+            "gemini-3.1-flash-lite",
+            "gemini-flash-lite-latest",
+        ]
+        candidate_models = list(dict.fromkeys(models_to_try))
+
+        last_err = None
+        for candidate_model in candidate_models:
+            try:
+                response = client.models.generate_content(
+                    model=candidate_model,
+                    contents=prompt,
+                    config=config,
+                )
+
+                if response and response.text:
+                    return response.text.strip()
+            except Exception as e:
+                last_err = e
+                logger.warning("Gemini model %s failed in generate_response: %s. Trying fallback...", candidate_model, str(e))
+                continue
+
+        logger.error("All Gemini candidate models failed. Last error: %s", last_err)
+        raise AppSecurityException("Error generating response from AI service. Please try again later.")
+
 
 gemini_client = GeminiClient()

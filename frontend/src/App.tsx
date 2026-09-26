@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter } from 'react-router-dom';
 import { AuthProvider } from './hooks/useAuth';
 import { ThemeProvider } from './context/ThemeContext';
+import { AgentProvider } from './context/AgentContext';
 import { AppRoutes } from './routes';
 
 export const App: React.FC = () => {
@@ -14,7 +15,9 @@ export const App: React.FC = () => {
     >
       <ThemeProvider>
         <AuthProvider>
-          <AppRoutes />
+          <AgentProvider>
+            <AppRoutes />
+          </AgentProvider>
         </AuthProvider>
       </ThemeProvider>
     </BrowserRouter>

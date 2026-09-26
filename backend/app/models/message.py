@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional, Any, Dict
+from typing import Optional, Any
 from sqlalchemy import String, Text, ForeignKey, Uuid, JSON, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from app.models.base import Base, utc_now
@@ -8,9 +8,8 @@ from datetime import datetime
 
 class Message(Base):
     """
-    Schema (matches Supabase SQL):
-      - sources  JSONB  (stores RAG source references)
-      - No updated_at (messages are immutable once created)
+    Message table — strictly scoped to owner_id and conversation_id.
+    Stores content, RAG source citations, and MCP tool execution events.
     """
     __tablename__ = "messages"
 
@@ -30,9 +29,14 @@ class Message(Base):
         nullable=False,
         index=True,
     )
-    role: Mapped[str] = mapped_column(String(50), nullable=False)
+    role: Mapped[str] = mapped_column(String(50), nullable=False)  # "user" | "assistant" | "system"
     content: Mapped[str] = mapped_column(Text, nullable=False)
     sources: Mapped[Optional[Any]] = mapped_column(
+        JSON,
+        nullable=True,
+        default=list,
+    )
+    events: Mapped[Optional[Any]] = mapped_column(
         JSON,
         nullable=True,
         default=list,

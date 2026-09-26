@@ -46,12 +46,11 @@ export const LoginPage: React.FC = () => {
         <ThemeSwitcher />
       </header>
 
-      {/* Main 55/45 Two-Column Layout */}
+      {/* Login Card */}
       <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8">
-        <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 rounded-2xl border border-border bg-surface shadow-level2 overflow-hidden">
+        <div className="w-full max-w-md rounded-2xl border border-border bg-surface shadow-level2 overflow-hidden">
           
-          {/* Left Column: Form (55% / 7 cols) */}
-          <div className="lg:col-span-7 p-8 sm:p-10 flex flex-col justify-center">
+          <div className="p-8 sm:p-10 flex flex-col justify-center">
             <div className="mb-6">
               <h1 className="font-heading text-2xl font-bold tracking-tight text-text-main">Sign in</h1>
               <p className="text-xs text-text-secondary mt-1.5">
@@ -150,43 +149,7 @@ export const LoginPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Right Column: Editorial Panel (45% / 5 cols) */}
-          <div className="hidden lg:flex lg:col-span-5 bg-surface-2 p-10 flex-col justify-between border-l border-border relative overflow-hidden">
-            {/* Subtle geometric line pattern */}
-            <div
-              className="absolute inset-0 opacity-[0.04] pointer-events-none"
-              style={{
-                backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)',
-                backgroundSize: '24px 24px',
-              }}
-            />
 
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface border border-border text-[11px] font-mono text-text-secondary">
-                <span className="w-1.5 h-1.5 rounded-full bg-success" />
-                <span>Zero-Retention RAG Engine</span>
-              </div>
-            </div>
-
-            <div className="relative z-10 my-auto">
-              <blockquote className="text-lg font-medium leading-snug text-text-main">
-                "Ask questions with complete confidence. Every answer links back to the exact passage and source document."
-              </blockquote>
-              <div className="mt-4 flex items-center gap-3">
-                <div className="w-8 h-8 rounded-full bg-surface border border-border flex items-center justify-center text-xs font-mono font-semibold text-text-main">
-                  pg
-                </div>
-                <div>
-                  <div className="text-xs font-semibold text-text-main">PostgreSQL + pgvector</div>
-                  <div className="text-[11px] text-text-secondary">Isolated user-scoped retrieval</div>
-                </div>
-              </div>
-            </div>
-
-            <div className="text-[11px] text-text-secondary">
-              Protected by Supabase Row-Level Security & AES-256
-            </div>
-          </div>
 
         </div>
       </main>

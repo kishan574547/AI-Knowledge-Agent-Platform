@@ -14,6 +14,9 @@ class Conversation(TimeStampedModel):
         index=True,
     )
     title: Mapped[str] = mapped_column(String(255), default="New Conversation", nullable=False)
+    conversation_type: Mapped[str] = mapped_column(
+        String(50), default="rag", server_default="rag", nullable=False, index=True
+    )  # "rag" | "mcp" | "multi_agent"
 
     # Relationships
     owner: Mapped[Optional["Profile"]] = relationship(

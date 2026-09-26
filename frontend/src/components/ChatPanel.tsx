@@ -10,6 +10,8 @@ import {
   AlertCircle,
   BookOpen,
   Brain,
+  History,
+  Plus,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChatMessage, Conversation } from '../types/conversation';
@@ -23,6 +25,8 @@ interface ChatPanelProps {
   onSendMessage: (text: string, scope: 'all' | 'selected', selectedIds: string[]) => void;
   onUpdateScope: (scope: 'all' | 'selected', selectedIds: string[]) => void;
   onRenameTitle?: (title: string) => void;
+  onOpenHistory?: () => void;
+  onNewChat?: () => void;
 }
 
 function formatTime(iso: string) {
@@ -239,6 +243,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   isQuerying,
   onSendMessage,
   onUpdateScope,
+  onOpenHistory,
+  onNewChat,
 }) => {
   const [input, setInput] = useState('');
   const [scope, setScope] = useState<'all' | 'selected'>(conversation?.documentScope || 'all');
@@ -317,35 +323,63 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </p>
         </div>
 
-        {/* Document scope selector */}
-        <div className="relative" ref={scopeMenuRef}>
-          <motion.button
-            whileHover={{ scale: 1.03 }}
-            whileTap={{ scale: 0.97 }}
-            onClick={() => setIsScopeMenuOpen(!isScopeMenuOpen)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-border/60 text-xs font-semibold text-text-main transition-all"
-          >
-            <Filter className="w-3.5 h-3.5 text-accent" />
-            <span>
-              {scope === 'all' ? 'All documents' : `${selectedIds.length} selected`}
-            </span>
-            <motion.div
-              animate={{ rotate: isScopeMenuOpen ? 180 : 0 }}
-              transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+        {/* Action Controls */}
+        <div className="flex items-center gap-2">
+          {onOpenHistory && (
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={onOpenHistory}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-border/60 text-xs font-semibold text-text-main transition-all"
+              title="View past conversations"
             >
-              <ChevronDown className="w-3 h-3 text-text-muted" />
-            </motion.div>
-          </motion.button>
+              <History className="w-3.5 h-3.5 text-accent" />
+              <span>Chat History</span>
+            </motion.button>
+          )}
 
-          <AnimatePresence>
-            {isScopeMenuOpen && (
+          {onNewChat && (
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={onNewChat}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-border/60 text-xs font-semibold text-text-main transition-all"
+              title="Start a new chat thread"
+            >
+              <Plus className="w-3.5 h-3.5 text-accent" />
+              <span>New Chat</span>
+            </motion.button>
+          )}
+
+          {/* Document scope selector */}
+          <div className="relative" ref={scopeMenuRef}>
+            <motion.button
+              whileHover={{ scale: 1.03 }}
+              whileTap={{ scale: 0.97 }}
+              onClick={() => setIsScopeMenuOpen(!isScopeMenuOpen)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-border/60 text-xs font-semibold text-text-main transition-all"
+            >
+              <Filter className="w-3.5 h-3.5 text-accent" />
+              <span>
+                {scope === 'all' ? 'All documents' : `${selectedIds.length} selected`}
+              </span>
               <motion.div
-                initial={{ opacity: 0, scale: 0.94, y: 6 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.94, y: 6 }}
-                transition={{ type: 'spring', stiffness: 340, damping: 28 }}
-                className="absolute right-0 mt-1.5 w-64 rounded-xl border border-border bg-surface shadow-level2 p-2 z-30"
+                animate={{ rotate: isScopeMenuOpen ? 180 : 0 }}
+                transition={{ type: 'spring', stiffness: 300, damping: 26 }}
               >
+                <ChevronDown className="w-3 h-3 text-text-muted" />
+              </motion.div>
+            </motion.button>
+
+            <AnimatePresence>
+              {isScopeMenuOpen && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.94, y: 6 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.94, y: 6 }}
+                  transition={{ type: 'spring', stiffness: 340, damping: 28 }}
+                  className="absolute right-0 mt-1.5 w-64 rounded-xl border border-border bg-surface shadow-level2 p-2 z-30"
+                >
                 <div className="p-1 text-[11px] font-semibold text-text-muted uppercase tracking-wider">
                   Context Scope
                 </div>
@@ -407,6 +441,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               </motion.div>
             )}
           </AnimatePresence>
+        </div>
         </div>
       </div>
 

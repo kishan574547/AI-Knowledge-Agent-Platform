@@ -139,9 +139,9 @@ export const ForgotPasswordPage: React.FC = () => {
       </header>
 
       <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8">
-        <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 rounded-2xl border border-border bg-surface shadow-level2 overflow-hidden">
+        <div className="w-full max-w-md rounded-2xl border border-border bg-surface shadow-level2 overflow-hidden">
           
-          <div className="lg:col-span-7 p-8 sm:p-10 flex flex-col justify-center">
+          <div className="p-8 sm:p-10 flex flex-col justify-center">
             
             {/* 3-Segment Step Indicator */}
             <div className="flex items-center gap-2 mb-6">
@@ -378,32 +378,6 @@ export const ForgotPasswordPage: React.FC = () => {
             </AnimatePresence>
           </div>
 
-          <div className="hidden lg:flex lg:col-span-5 bg-surface-2 p-10 flex-col justify-between border-l border-border relative overflow-hidden">
-            <div
-              className="absolute inset-0 opacity-[0.04] pointer-events-none"
-              style={{
-                backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)',
-                backgroundSize: '24px 24px',
-              }}
-            />
-
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface border border-border text-[11px] font-mono text-text-secondary">
-                <span className="w-1.5 h-1.5 rounded-full bg-success" />
-                <span>Encrypted OTP Recovery</span>
-              </div>
-            </div>
-
-            <div className="relative z-10 my-auto">
-              <blockquote className="text-lg font-medium leading-snug text-text-main">
-                "Direct token verification via your secure SMTP provider ensures unauthorized password resets are impossible."
-              </blockquote>
-            </div>
-
-            <div className="text-[11px] text-text-secondary">
-              DocuRAG Enterprise Access Security
-            </div>
-          </div>
 
         </div>
       </main>

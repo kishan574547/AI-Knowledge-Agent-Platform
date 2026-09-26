@@ -90,13 +90,20 @@ class RAGQAPipeline:
                     # Do not leak document existence
                     raise ResourceNotFoundException("One or more specified documents not found or access denied")
 
-        # 2. Conversation ownership verification / creation if conversation_id provided
-        active_conversation_id = None
+        # 2. Conversation ownership verification / creation
         if conversation_id:
             conv = self.conv_repo.get_or_create(
                 conversation_id=conversation_id,
                 owner_id=owner_id,
-                title=cleaned_question[:60],
+                title="New Conversation",
+                conversation_type="rag",
+            )
+            active_conversation_id = conv.id
+        else:
+            conv = self.conv_repo.create_conversation(
+                owner_id=owner_id,
+                title="New Conversation",
+                conversation_type="rag",
             )
             active_conversation_id = conv.id
 
@@ -190,7 +197,7 @@ class RAGQAPipeline:
         )
         logger.info("Gemini generated answer in %.2fs", time.time() - t_gen)
 
-        # 9. Persist conversation history if requested
+        # 9. Persist conversation history
         if active_conversation_id:
             try:
                 self.conv_repo.create_message(
@@ -199,11 +206,16 @@ class RAGQAPipeline:
                     role="user",
                     content=cleaned_question,
                 )
+                serialized_sources = [
+                    s.model_dump() if hasattr(s, "model_dump") else s.dict() if hasattr(s, "dict") else dict(s)
+                    for s in sources
+                ]
                 self.conv_repo.create_message(
                     conversation_id=active_conversation_id,
                     owner_id=owner_id,
                     role="assistant",
                     content=answer,
+                    sources=serialized_sources,
                 )
             except Exception as e:
                 logger.warning("Failed to persist conversation message: %s", str(e))
@@ -213,7 +225,7 @@ class RAGQAPipeline:
             self.memory_service.extract_and_save_from_text(
                 owner_id=owner_id,
                 text=cleaned_question,
-                source_conversation_id=active_conversation_id,
+                conversation_id=active_conversation_id,
             )
         except Exception as ext_err:
             logger.warning("Background memory extraction warning: %s", str(ext_err))

@@ -3,6 +3,8 @@ import { Routes, Route } from 'react-router-dom';
 import { DashboardLayout } from '../layouts/DashboardLayout';
 import { DashboardPage } from '../pages/DashboardPage';
 import { MemoryPage } from '../pages/MemoryPage';
+import { McpToolsPage } from '../pages/McpToolsPage';
+import { MultiAgentResearchPage } from '../pages/MultiAgentResearchPage';
 import { SettingsPage } from '../pages/SettingsPage';
 import { LoginPage } from '../pages/LoginPage';
 import { RegisterPage } from '../pages/RegisterPage';
@@ -30,9 +32,8 @@ export const AppRoutes: React.FC = () => {
         <Route index element={<DashboardPage />} />
         <Route path="memory" element={<MemoryPage />} />
         <Route path="settings" element={<SettingsPage />} />
-        {/* Placeholder routes for future modules */}
-        <Route path="mcp-tools" element={<ComingSoonPage title="MCP Tools" />} />
-        <Route path="multi-agent" element={<ComingSoonPage title="Multi-Agent Research" />} />
+        <Route path="mcp-tools" element={<McpToolsPage />} />
+        <Route path="multi-agent" element={<MultiAgentResearchPage />} />
       </Route>
 
       {/* 404 Catch-All */}
@@ -41,15 +42,4 @@ export const AppRoutes: React.FC = () => {
   );
 };
 
-// Inline placeholder for future modules
-const ComingSoonPage: React.FC<{ title: string }> = ({ title }) => (
-  <div className="flex flex-col flex-1 items-center justify-center h-full text-center gap-4">
-    <div className="w-16 h-16 rounded-2xl bg-accent-muted border border-accent/20 flex items-center justify-center text-accent text-2xl mx-auto">
-      🚧
-    </div>
-    <h2 className="font-heading text-lg font-bold text-text-main">{title}</h2>
-    <p className="text-sm text-text-muted max-w-sm">
-      This module is planned for a future release. Check back soon — we're building it next.
-    </p>
-  </div>
-);
+

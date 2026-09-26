@@ -36,8 +36,8 @@ export const TopBar: React.FC = () => {
   };
 
   return (
-    <header className="h-14 shrink-0 border-b border-border bg-surface flex items-center justify-between px-4 sm:px-6 z-30">
-      {/* Left: page context breadcrumb — will be dynamic via outlet */}
+    <div className="flex items-center justify-between w-full h-full">
+      {/* Left: empty placeholder for breadcrumb */}
       <div />
 
       {/* Right: theme + user */}
@@ -92,6 +92,6 @@ export const TopBar: React.FC = () => {
           </div>
         )}
       </div>
-    </header>
+    </div>
   );
 };
