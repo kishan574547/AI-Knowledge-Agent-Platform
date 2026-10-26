@@ -22,6 +22,7 @@ import {
   researchService,
   ResearchSession,
 } from '../services/researchService';
+import { MarkdownRenderer } from '../utils/MarkdownRenderer';
 
 const AGENT_STAGES = [
   { id: 'planner', label: 'Research Planner', icon: ListTodo, color: 'text-blue-500', bg: 'bg-blue-500/10' },
@@ -383,9 +384,7 @@ export const MultiAgentResearchPage: React.FC = () => {
                     {/* Executive Summary */}
                     <div className="p-4 rounded-xl bg-surface-2 border border-border space-y-2">
                       <h3 className="text-xs font-bold text-accent uppercase tracking-wider">Executive Summary</h3>
-                      <p className="text-xs md:text-sm text-text-main leading-relaxed whitespace-pre-line">
-                        {activeSession.final_report.executive_summary}
-                      </p>
+                      <MarkdownRenderer content={activeSession.final_report.executive_summary} className="text-xs md:text-sm text-text-main" />
                     </div>
 
                     {/* Key Findings Grid */}
@@ -416,8 +415,8 @@ export const MultiAgentResearchPage: React.FC = () => {
                     {activeSession.final_report.detailed_analysis && (
                       <div className="space-y-2">
                         <h3 className="text-xs font-bold text-text-main uppercase tracking-wider">Detailed Analysis</h3>
-                        <div className="p-4 rounded-xl bg-surface-2 border border-border text-xs md:text-sm text-text-main leading-relaxed whitespace-pre-line">
-                          {activeSession.final_report.detailed_analysis}
+                        <div className="p-4 rounded-xl bg-surface-2 border border-border">
+                          <MarkdownRenderer content={activeSession.final_report.detailed_analysis} className="text-xs md:text-sm text-text-main" />
                         </div>
                       </div>
                     )}

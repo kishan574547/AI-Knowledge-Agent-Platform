@@ -14,22 +14,28 @@ export default {
         border: 'var(--border)',
         'text-main': 'var(--text-primary)',
         'text-muted': 'var(--text-secondary)',
+        'text-secondary': 'var(--text-secondary)',
+        'text-on-accent': 'var(--text-on-accent)',
         accent: {
           DEFAULT: 'var(--accent)',
           hover: 'var(--accent-hover)',
           muted: 'var(--accent-muted)',
+          tint: 'var(--accent-muted)',
         },
         success: {
           DEFAULT: 'var(--success)',
           muted: 'var(--success-muted)',
+          tint: 'var(--success-muted)',
         },
         warning: {
           DEFAULT: 'var(--warning)',
           muted: 'var(--warning-muted)',
+          tint: 'var(--warning-muted)',
         },
         danger: {
           DEFAULT: 'var(--danger)',
           muted: 'var(--danger-muted)',
+          tint: 'var(--danger-muted)',
         },
       },
       fontFamily: {
@@ -37,12 +43,32 @@ export default {
         heading: ['"Plus Jakarta Sans"', '-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'sans-serif'],
         mono: ['"JetBrains Mono"', '"Courier New"', 'monospace'],
       },
+      borderRadius: {
+        sm: 'var(--radius-sm, 6px)',
+        DEFAULT: 'var(--radius-md, 8px)',
+        md: 'var(--radius-md, 8px)',
+        lg: 'var(--radius-lg, 12px)',
+        xl: 'var(--radius-xl, 16px)',
+      },
       boxShadow: {
-        level1: 'var(--shadow-level1)',
-        level2: 'var(--shadow-level2)',
+        card: 'var(--shadow-card)',
+        overlay: 'var(--shadow-overlay)',
+        level1: 'var(--shadow-card)',
+        level2: 'var(--shadow-overlay)',
       },
       transitionDuration: {
+        '150': '150ms',
+        '200': '200ms',
         '250': '250ms',
+      },
+      keyframes: {
+        shimmer: {
+          '0%': { backgroundPosition: '-400px 0' },
+          '100%': { backgroundPosition: '400px 0' },
+        },
+      },
+      animation: {
+        shimmer: 'shimmer 1.4s linear infinite',
       },
     },
   },

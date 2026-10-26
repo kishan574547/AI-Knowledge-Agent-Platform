@@ -37,9 +37,15 @@ class AuthService:
                     data = resp.json()
                     if resp.status_code >= 400:
                         msg = data.get("msg") or data.get("message") or "Registration failed"
+                        logger.error("Supabase registration request failed: status=%d, msg=%s", resp.status_code, msg)
                         raise AppSecurityException(detail=msg, status_code=resp.status_code)
 
                     user = data.get("user") or {}
+                    identities = user.get("identities")
+                    if isinstance(identities, list) and len(identities) == 0:
+                        logger.warning("Registration requested for existing email (identities empty)")
+                        raise AppSecurityException(detail="This email is already registered. Please sign in or use password recovery.", status_code=400)
+
                     access_token = data.get("access_token") or "registration_confirmation_pending"
                     return TokenResponse(
                         access_token=access_token,

@@ -3,8 +3,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, User, CheckCircle2, AlertCircle, ArrowLeft } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { authService } from '../services/authService';
-import { Spinner } from '../components/Spinner';
-import { ThemeSwitcher } from '../components/ThemeSwitcher';
+import { AuthLayout } from '../components/auth/AuthLayout';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
 
 type Step = 'FORM' | 'OTP' | 'SUCCESS';
 
@@ -13,7 +14,7 @@ export const RegisterPage: React.FC = () => {
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  
+
   // 6 separate OTP input boxes
   const [otpDigits, setOtpDigits] = useState<string[]>(['', '', '', '', '', '']);
   const otpInputRefs = useRef<(HTMLInputElement | null)[]>([]);
@@ -21,7 +22,6 @@ export const RegisterPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [countdown, setCountdown] = useState(60);
-  const [isSuccessPulse, setIsSuccessPulse] = useState(false);
   const navigate = useNavigate();
 
   // Resend Countdown
@@ -32,20 +32,6 @@ export const RegisterPage: React.FC = () => {
     }
     return () => clearInterval(timer);
   }, [step, countdown]);
-
-  // Password strength calculation
-  const getPasswordStrength = () => {
-    if (!password) return { level: 0, label: 'None' };
-    let score = 0;
-    if (password.length >= 8) score++;
-    if (/[A-Z]/.test(password) && /[0-9]/.test(password)) score++;
-    if (/[^A-Za-z0-9]/.test(password)) score++;
-    if (score === 1) return { level: 1, label: 'Weak' };
-    if (score === 2) return { level: 2, label: 'Good' };
-    return { level: 3, label: 'Strong' };
-  };
-
-  const strength = getPasswordStrength();
 
   // Step 1: Submit Form
   const handleRegister = async (e: React.FormEvent) => {
@@ -59,15 +45,27 @@ export const RegisterPage: React.FC = () => {
     setLoading(true);
 
     try {
-      const data = await authService.register(email.trim(), password, fullName.trim());
+      const data: any = await authService.register(email.trim(), password, fullName.trim());
       if (data?.session) {
         navigate('/');
         return;
       }
+
+      // Check if user is already registered (identities empty array)
+      if (data?.user?.identities && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
+        setError('This email is already registered. Please sign in or use "Forgot password" to recover your account.');
+        return;
+      }
+
       setStep('OTP');
       setCountdown(60);
     } catch (err: any) {
-      setError(err.message || 'Failed to create account');
+      const msg = err.message || '';
+      if (msg.toLowerCase().includes('rate limit')) {
+        setError('Email rate limit exceeded (Supabase limit is 3 emails/hr). Please wait a few minutes before trying again.');
+      } else {
+        setError(msg || "We couldn't send the code. Try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -99,20 +97,27 @@ export const RegisterPage: React.FC = () => {
     }
   };
 
+  const handleOtpPaste = (e: React.ClipboardEvent<HTMLInputElement>) => {
+    e.preventDefault();
+    const paste = e.clipboardData.getData('text').trim();
+    if (!/^\d{6}$/.test(paste)) return;
+
+    const digits = paste.split('');
+    setOtpDigits(digits);
+    otpInputRefs.current[5]?.focus();
+    submitOtpCode(paste);
+  };
+
   const submitOtpCode = async (code: string) => {
     setError(null);
     setLoading(true);
 
     try {
       await authService.verifySignupOtp(email.trim(), code);
-      setIsSuccessPulse(true);
-      setTimeout(() => {
-        setStep('SUCCESS');
-        setTimeout(() => navigate('/'), 1200);
-      }, 400);
+      setStep('SUCCESS');
+      setTimeout(() => navigate('/'), 1200);
     } catch (err: any) {
-      setError(err.message || 'Invalid or expired OTP code');
-      setIsSuccessPulse(false);
+      setError(err.message || 'Invalid or expired verification code');
     } finally {
       setLoading(false);
     }
@@ -125,290 +130,227 @@ export const RegisterPage: React.FC = () => {
       await authService.resendSignupOtp(email.trim());
       setCountdown(60);
     } catch (err: any) {
-      setError(err.message || 'Failed to resend code');
+      const msg = err.message || '';
+      if (msg.toLowerCase().includes('rate limit')) {
+        setError('Rate limit reached for sending emails. Please wait a few minutes before resending.');
+      } else {
+        setError(msg || 'Failed to resend code');
+      }
     }
   };
 
   return (
-    <div className="min-h-screen bg-base text-text-main flex flex-col justify-between">
-      {/* Top Header */}
-      <header className="w-full px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-lg bg-text-main text-surface font-mono font-bold text-xs flex items-center justify-center">
-            R
+    <AuthLayout>
+      {/* 2-Step Indicator */}
+      <div className="flex items-center gap-2 mb-6">
+        <div className="flex-1 flex items-center gap-2">
+          <div
+            className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center transition-colors ${
+              step === 'FORM'
+                ? 'bg-accent text-text-on-accent'
+                : 'bg-success text-white'
+            }`}
+          >
+            {step === 'FORM' ? '1' : '✓'}
           </div>
-          <span className="font-semibold text-sm tracking-tight text-text-main">DocuRAG</span>
+          <span className="text-xs font-semibold text-text-main">Account</span>
         </div>
-        <ThemeSwitcher />
-      </header>
 
-      {/* Main Container */}
-      <main className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-8">
-        <div className="w-full max-w-4xl grid grid-cols-1 lg:grid-cols-12 rounded-2xl border border-border bg-surface shadow-level2 overflow-hidden">
-          
-          {/* Left Column: Form / OTP (55%) */}
-          <div className="lg:col-span-7 p-8 sm:p-10 flex flex-col justify-center">
-            
-            {/* 2-Segment Step Indicator */}
-            <div className="flex items-center gap-2 mb-6">
-              <div
-                className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                  step === 'FORM' ? 'bg-accent' : 'bg-success'
-                }`}
-              />
-              <div
-                className={`h-1.5 flex-1 rounded-full transition-all duration-300 ${
-                  step === 'OTP' || step === 'SUCCESS' ? 'bg-accent' : 'bg-surface-2 border border-border'
-                }`}
-              />
-            </div>
+        <div className="w-8 h-[1px] bg-border" />
 
-            <AnimatePresence mode="wait">
-              {step === 'FORM' && (
-                <motion.div
-                  key="step-form"
-                  initial={{ opacity: 0, x: -12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 12 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="mb-5">
-                    <h1 className="text-2xl font-bold tracking-tight text-text-main">Create workspace</h1>
-                    <p className="text-xs text-text-secondary mt-1">
-                      Step 1 of 2 · Register your isolated document environment.
-                    </p>
-                  </div>
-
-                  {error && (
-                    <div className="mb-4 flex items-start gap-2.5 p-3 rounded-lg border-l-4 border-danger bg-danger-tint text-danger text-xs">
-                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                      <span className="font-medium">{error}</span>
-                    </div>
-                  )}
-
-                  <form onSubmit={handleRegister} className="space-y-3.5">
-                    <div>
-                      <label className="block text-xs font-semibold text-text-main mb-1">
-                        Full name
-                      </label>
-                      <div className="relative">
-                        <User className="w-4 h-4 text-text-secondary absolute left-3.5 top-3.5" />
-                        <input
-                          type="text"
-                          required
-                          value={fullName}
-                          onChange={(e) => setFullName(e.target.value)}
-                          placeholder="Jane Doe"
-                          className="w-full h-11 pl-10 pr-3.5 bg-surface-2 border border-border rounded-lg text-sm text-text-main placeholder-text-secondary/60 focus:bg-surface transition-all"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-text-main mb-1">
-                        Work email
-                      </label>
-                      <div className="relative">
-                        <Mail className="w-4 h-4 text-text-secondary absolute left-3.5 top-3.5" />
-                        <input
-                          type="email"
-                          required
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          placeholder="jane@company.com"
-                          className="w-full h-11 pl-10 pr-3.5 bg-surface-2 border border-border rounded-lg text-sm text-text-main placeholder-text-secondary/60 focus:bg-surface transition-all"
-                        />
-                      </div>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-text-main mb-1">
-                        Password (min 8 characters)
-                      </label>
-                      <div className="relative">
-                        <Lock className="w-4 h-4 text-text-secondary absolute left-3.5 top-3.5" />
-                        <input
-                          type="password"
-                          required
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="w-full h-11 pl-10 pr-3.5 bg-surface-2 border border-border rounded-lg text-sm text-text-main placeholder-text-secondary/60 focus:bg-surface transition-all"
-                        />
-                      </div>
-
-                      {/* 3-Segment Strength Bar */}
-                      {password && (
-                        <div className="mt-2 flex items-center gap-1.5">
-                          <div className="flex-1 grid grid-cols-3 gap-1">
-                            <div className={`h-1 rounded-full ${strength.level >= 1 ? (strength.level === 1 ? 'bg-danger' : strength.level === 2 ? 'bg-warning' : 'bg-success') : 'bg-surface-2'}`} />
-                            <div className={`h-1 rounded-full ${strength.level >= 2 ? (strength.level === 2 ? 'bg-warning' : 'bg-success') : 'bg-surface-2'}`} />
-                            <div className={`h-1 rounded-full ${strength.level >= 3 ? 'bg-success' : 'bg-surface-2'}`} />
-                          </div>
-                          <span className="text-[10px] font-mono text-text-secondary">{strength.label}</span>
-                        </div>
-                      )}
-                    </div>
-
-                    <button
-                      type="submit"
-                      disabled={loading}
-                      className="w-full h-11 mt-2 rounded-lg bg-accent text-white font-medium text-sm flex items-center justify-center gap-2 hover:bg-accent-hover transition-colors disabled:opacity-50"
-                    >
-                      {loading ? (
-                        <>
-                          <Spinner size="sm" />
-                          <span>Sending code...</span>
-                        </>
-                      ) : (
-                        'Continue to Verification'
-                      )}
-                    </button>
-                  </form>
-
-                  <div className="mt-5 pt-5 border-t border-border text-center text-xs text-text-secondary">
-                    Already have an account?{' '}
-                    <Link to="/login" className="font-semibold text-accent hover:underline">
-                      Sign in
-                    </Link>
-                  </div>
-                </motion.div>
-              )}
-
-              {step === 'OTP' && (
-                <motion.div
-                  key="step-otp"
-                  initial={{ opacity: 0, x: 12 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -12 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <button
-                    onClick={() => setStep('FORM')}
-                    className="flex items-center gap-1 text-xs text-text-secondary hover:text-text-main mb-4"
-                  >
-                    <ArrowLeft className="w-3.5 h-3.5" />
-                    <span>Back</span>
-                  </button>
-
-                  <div className="mb-6">
-                    <h1 className="text-2xl font-bold tracking-tight text-text-main">Enter 6-digit code</h1>
-                    <p className="text-xs text-text-secondary mt-1">
-                      We sent a verification code to <span className="font-mono text-text-main font-semibold">{email}</span>.
-                    </p>
-                  </div>
-
-                  {error && (
-                    <div className="mb-4 flex items-start gap-2.5 p-3 rounded-lg border-l-4 border-danger bg-danger-tint text-danger text-xs">
-                      <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-                      <span className="font-medium">{error}</span>
-                    </div>
-                  )}
-
-                  {/* 6-Box OTP Inputs */}
-                  <div className="flex items-center justify-between gap-2 my-6">
-                    {otpDigits.map((digit, idx) => (
-                      <input
-                        key={idx}
-                        ref={(el) => (otpInputRefs.current[idx] = el)}
-                        type="text"
-                        maxLength={1}
-                        value={digit}
-                        onChange={(e) => handleOtpChange(idx, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                        className={`w-11 h-13 sm:w-12 sm:h-14 text-center text-lg font-mono font-bold rounded-lg border bg-surface-2 transition-all ${
-                          isSuccessPulse
-                            ? 'border-success bg-success-tint text-success ring-2 ring-success'
-                            : digit
-                            ? 'border-accent bg-surface text-text-main ring-1 ring-accent'
-                            : 'border-border text-text-main focus:border-accent'
-                        }`}
-                      />
-                    ))}
-                  </div>
-
-                  <button
-                    onClick={() => submitOtpCode(otpDigits.join(''))}
-                    disabled={loading || otpDigits.includes('')}
-                    className="w-full h-11 rounded-lg bg-accent text-white font-medium text-sm flex items-center justify-center gap-2 hover:bg-accent-hover transition-colors disabled:opacity-50"
-                  >
-                    {loading ? <Spinner size="sm" /> : 'Verify & Launch Workspace'}
-                  </button>
-
-                  <div className="mt-6 text-center text-xs text-text-secondary">
-                    {countdown > 0 ? (
-                      <span>Resend code in <strong className="font-mono">{countdown}s</strong></span>
-                    ) : (
-                      <button
-                        onClick={handleResend}
-                        className="font-semibold text-accent hover:underline"
-                      >
-                        Resend code now
-                      </button>
-                    )}
-                  </div>
-                </motion.div>
-              )}
-
-              {step === 'SUCCESS' && (
-                <motion.div
-                  key="step-success"
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="py-12 text-center"
-                >
-                  <div className="w-12 h-12 rounded-full bg-success-tint border border-success text-success flex items-center justify-center mx-auto mb-4">
-                    <CheckCircle2 className="w-6 h-6" />
-                  </div>
-                  <h2 className="text-xl font-bold text-text-main">Workspace Activated</h2>
-                  <p className="text-xs text-text-secondary mt-1">
-                    Redirecting you to your dashboard...
-                  </p>
-                </motion.div>
-              )}
-            </AnimatePresence>
+        <div className="flex-1 flex items-center gap-2">
+          <div
+            className={`w-6 h-6 rounded-full text-xs font-bold flex items-center justify-center transition-colors ${
+              step === 'OTP' || step === 'SUCCESS'
+                ? 'bg-accent text-text-on-accent'
+                : 'bg-surface-2 text-text-muted border border-border'
+            }`}
+          >
+            2
           </div>
-
-          {/* Right Column: Editorial Panel (45%) */}
-          <div className="hidden lg:flex lg:col-span-5 bg-surface-2 p-10 flex-col justify-between border-l border-border relative overflow-hidden">
-            <div
-              className="absolute inset-0 opacity-[0.04] pointer-events-none"
-              style={{
-                backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)',
-                backgroundSize: '24px 24px',
-              }}
-            />
-
-            <div>
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-surface border border-border text-[11px] font-mono text-text-secondary">
-                <span className="w-1.5 h-1.5 rounded-full bg-accent" />
-                <span>Encrypted Multi-Tenancy</span>
-              </div>
-            </div>
-
-            <div className="relative z-10 my-auto">
-              <blockquote className="text-lg font-medium leading-snug text-text-main">
-                "Upload your research papers, contracts, and notes. Get verified answers without leaking private documents."
-              </blockquote>
-              <div className="mt-4 flex items-center gap-2 text-xs font-mono text-text-secondary">
-                <span>✓ PDF</span>
-                <span>✓ Word (.docx)</span>
-                <span>✓ Markdown</span>
-                <span>✓ Text</span>
-              </div>
-            </div>
-
-            <div className="text-[11px] text-text-secondary">
-              Strict database isolation enforced per user tenant
-            </div>
-          </div>
-
+          <span className={`text-xs font-semibold ${step === 'OTP' ? 'text-text-main' : 'text-text-muted'}`}>
+            Verify
+          </span>
         </div>
-      </main>
+      </div>
 
-      <footer className="w-full py-4 text-center text-[11px] text-text-secondary">
-        DocuRAG Platform · Enterprise Multi-Tenant Intelligence
-      </footer>
-    </div>
+      {/* Server Error Banner with Left Accent Bar */}
+      <AnimatePresence>
+        {error && (
+          <motion.div
+            initial={{ opacity: 0, y: -6, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: -6, height: 0 }}
+            className="mb-5 overflow-hidden"
+          >
+            <div className="flex items-start gap-2.5 p-3 rounded-md border-l-4 border-danger bg-danger-muted text-danger text-xs font-medium">
+              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+              <span>{error}</span>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence mode="wait">
+        {step === 'FORM' && (
+          <motion.div
+            key="step-form"
+            initial={{ opacity: 0, x: -8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <div className="mb-6 text-left">
+              <h1 className="font-heading text-2xl font-bold tracking-tight text-text-main">
+                Create account
+              </h1>
+              <p className="text-xs text-text-secondary mt-1">
+                Register your isolated document workspace.
+              </p>
+            </div>
+
+            <form onSubmit={handleRegister} className="space-y-4">
+              <Input
+                label="Full name"
+                type="text"
+                required
+                value={fullName}
+                onChange={(e) => setFullName(e.target.value)}
+                placeholder="Jane Doe"
+                leftIcon={<User className="w-4 h-4" />}
+              />
+
+              <Input
+                label="Email address"
+                type="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="name@company.com"
+                leftIcon={<Mail className="w-4 h-4" />}
+              />
+
+              <Input
+                label="Password (min 8 characters)"
+                type="password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                leftIcon={<Lock className="w-4 h-4" />}
+              />
+
+              {/* Primary button full width at bottom of form */}
+              <Button
+                type="submit"
+                variant="primary"
+                size="lg"
+                fullWidth
+                loading={loading}
+                className="mt-2"
+              >
+                Continue to Verification
+              </Button>
+            </form>
+
+            <div className="mt-6 pt-5 border-t border-border text-center text-xs text-text-secondary">
+              Already have an account?{' '}
+              <Link to="/login" className="font-semibold text-accent hover:underline">
+                Sign in
+              </Link>
+            </div>
+          </motion.div>
+        )}
+
+        {step === 'OTP' && (
+          <motion.div
+            key="step-otp"
+            initial={{ opacity: 0, x: 8 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -8 }}
+            transition={{ duration: 0.2 }}
+          >
+            <button
+              onClick={() => setStep('FORM')}
+              className="flex items-center gap-1.5 text-xs text-text-secondary hover:text-text-main mb-4 transition-colors"
+            >
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Change email</span>
+            </button>
+
+            <div className="mb-6 text-left">
+              <h1 className="font-heading text-2xl font-bold tracking-tight text-text-main">
+                Enter 6-digit code
+              </h1>
+              <p className="text-xs text-text-secondary mt-1">
+                We sent a verification code to <span className="font-mono text-text-main font-semibold">{email}</span>.
+              </p>
+            </div>
+
+            {/* 6-box OTP with paste support */}
+            <div className="flex items-center justify-between gap-2 my-6">
+              {otpDigits.map((digit, idx) => (
+                <input
+                  key={idx}
+                  ref={(el) => (otpInputRefs.current[idx] = el)}
+                  type="text"
+                  inputMode="numeric"
+                  maxLength={1}
+                  value={digit}
+                  onChange={(e) => handleOtpChange(idx, e.target.value)}
+                  onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                  onPaste={handleOtpPaste}
+                  className="w-11 h-12 sm:w-12 sm:h-13 text-center text-lg font-mono font-bold rounded-md border border-border bg-surface-2 text-text-main focus:border-accent focus:bg-surface transition-all"
+                />
+              ))}
+            </div>
+
+            <Button
+              type="button"
+              variant="primary"
+              size="lg"
+              fullWidth
+              loading={loading}
+              disabled={otpDigits.includes('')}
+              onClick={() => submitOtpCode(otpDigits.join(''))}
+            >
+              Verify & Launch Workspace
+            </Button>
+
+            <div className="mt-6 text-center text-xs text-text-secondary">
+              {countdown > 0 ? (
+                <span>
+                  Resend code in <strong className="font-mono text-text-main">{countdown}s</strong>
+                </span>
+              ) : (
+                <button
+                  onClick={handleResend}
+                  className="font-semibold text-accent hover:underline"
+                >
+                  Resend code now
+                </button>
+              )}
+            </div>
+          </motion.div>
+        )}
+
+        {step === 'SUCCESS' && (
+          <motion.div
+            key="step-success"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="py-10 text-center"
+          >
+            <div className="w-12 h-12 rounded-full bg-success-muted text-success flex items-center justify-center mx-auto mb-4">
+              <CheckCircle2 className="w-6 h-6" />
+            </div>
+            <h2 className="font-heading text-xl font-bold text-text-main">Workspace Activated</h2>
+            <p className="text-xs text-text-secondary mt-1">
+              Redirecting you to your dashboard...
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </AuthLayout>
   );
 };

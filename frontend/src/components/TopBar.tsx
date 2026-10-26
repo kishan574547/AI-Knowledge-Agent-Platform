@@ -1,16 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { LogOut, ShieldCheck, ChevronDown } from 'lucide-react';
+import { LogOut, ShieldCheck, ChevronDown, UploadCloud } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../hooks/useAuth';
+import { useDashboard } from '../context/DashboardContext';
 import { ThemeSwitcher } from './ThemeSwitcher';
+import { Button } from './ui/Button';
+import { Avatar } from './ui/Avatar';
 
-/**
- * Slim top bar — just user avatar + theme switcher.
- * Navigation is now in AppSidebar.
- */
 export const TopBar: React.FC = () => {
   const { user, logout } = useAuth();
+  const { setIsUploadModalOpen } = useDashboard();
   const navigate = useNavigate();
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
@@ -30,18 +30,26 @@ export const TopBar: React.FC = () => {
     navigate('/login');
   };
 
-  const getAvatarInitials = () => {
-    if (!user?.email) return 'U';
-    return user.email.slice(0, 2).toUpperCase();
-  };
-
   return (
     <div className="flex items-center justify-between w-full h-full">
-      {/* Left: empty placeholder for breadcrumb */}
-      <div />
+      {/* Left: Brand/Breadcrumb space */}
+      <div className="flex items-center gap-2">
+        <span className="font-heading text-xs font-semibold text-text-secondary hidden sm:inline">
+          Workspace
+        </span>
+      </div>
 
-      {/* Right: theme + user */}
+      {/* Right (Rule 4.7): Upload (secondary) -> Theme Switcher -> Avatar menu */}
       <div className="flex items-center gap-2.5">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={() => setIsUploadModalOpen(true)}
+          leftIcon={<UploadCloud className="w-3.5 h-3.5" />}
+        >
+          <span className="hidden sm:inline">Upload</span>
+        </Button>
+
         <ThemeSwitcher />
 
         {user && (
@@ -50,10 +58,9 @@ export const TopBar: React.FC = () => {
               onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
               className="flex items-center gap-1.5 p-0.5 rounded-full hover:ring-2 hover:ring-accent transition-all"
               title="Account Settings"
+              aria-label="User account menu"
             >
-              <div className="w-7 h-7 rounded-full bg-accent-muted border border-accent/30 text-accent font-mono text-[11px] font-bold flex items-center justify-center">
-                {getAvatarInitials()}
-              </div>
+              <Avatar name={user.email} size="sm" />
               <ChevronDown className="w-3 h-3 text-text-muted" />
             </button>
 
@@ -64,7 +71,7 @@ export const TopBar: React.FC = () => {
                   animate={{ opacity: 1, scale: 1, y: 0 }}
                   exit={{ opacity: 0, scale: 0.96, y: 6 }}
                   transition={{ duration: 0.15, ease: 'easeOut' }}
-                  className="absolute right-0 mt-2 w-64 rounded-xl border border-border bg-surface shadow-level2 p-2 z-50"
+                  className="absolute right-0 mt-2 w-64 rounded-lg border border-border bg-surface shadow-overlay p-2 z-50"
                 >
                   <div className="p-2 border-b border-border mb-1">
                     <div className="text-xs font-semibold text-text-main truncate">
@@ -81,7 +88,7 @@ export const TopBar: React.FC = () => {
 
                   <button
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2 p-2 rounded-lg text-xs font-medium text-danger hover:bg-danger-muted transition-colors"
+                    className="w-full flex items-center gap-2 p-2 rounded-md text-xs font-medium text-danger hover:bg-danger/10 transition-colors"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Sign Out</span>

@@ -29,7 +29,6 @@ export const DashboardLayout: React.FC = () => {
   return (
     <DashboardProvider>
       <div className="h-screen flex overflow-hidden bg-base text-text-main">
-
         {/* ── Desktop Sidebar (lg+): always rendered, fixed left ── */}
         <div className="hidden lg:flex h-full shrink-0">
           <AppSidebar
@@ -55,9 +54,9 @@ export const DashboardLayout: React.FC = () => {
               {/* Drawer */}
               <motion.div
                 key="drawer"
-                initial={{ x: -240 }}
+                initial={{ x: -260 }}
                 animate={{ x: 0 }}
-                exit={{ x: -240 }}
+                exit={{ x: -260 }}
                 transition={{ type: 'spring', stiffness: 320, damping: 32 }}
                 className="fixed left-0 top-0 bottom-0 z-50 lg:hidden"
               >
@@ -71,14 +70,14 @@ export const DashboardLayout: React.FC = () => {
         </AnimatePresence>
 
         {/* ── Right column: TopBar + Page content ── */}
-        <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-          {/* TopBar row — includes mobile hamburger */}
-          <div className="flex items-center shrink-0 border-b border-border bg-surface h-14 px-3 gap-2">
+        <div className="flex flex-col flex-1 min-w-0 overflow-hidden bg-base">
+          {/* TopBar row — 60px height, surface background, bottom border */}
+          <header className="flex items-center shrink-0 border-b border-border bg-surface h-[60px] px-3 sm:px-4 gap-2 sticky top-0 z-30">
             {/* Hamburger — mobile only */}
             <button
-              className="lg:hidden p-2 rounded-lg text-text-muted hover:text-text-main hover:bg-surface-2 transition-colors"
+              className="lg:hidden p-2 rounded-lg text-text-secondary hover:text-text-main hover:bg-surface-2 transition-colors"
               onClick={() => setMobileOpen(true)}
-              aria-label="Open navigation"
+              aria-label="Open navigation menu"
             >
               <Menu className="w-5 h-5" />
             </button>
@@ -87,15 +86,16 @@ export const DashboardLayout: React.FC = () => {
             <div className="flex-1 min-w-0">
               <TopBar />
             </div>
-          </div>
+          </header>
 
-          {/* Page content */}
-          <main className="flex-1 overflow-hidden flex flex-col min-h-0 px-3 sm:px-5 lg:px-6 py-4">
-            <Outlet />
+          {/* Page content with max 1280px, 24px side padding (16px on mobile) */}
+          <main className="flex-1 overflow-hidden flex flex-col min-h-0">
+            <div className="flex-1 overflow-hidden flex flex-col min-h-0 w-full max-w-[1280px] mx-auto px-4 sm:px-6 py-4 sm:py-5">
+              <Outlet />
+            </div>
           </main>
         </div>
       </div>
     </DashboardProvider>
   );
 };
-

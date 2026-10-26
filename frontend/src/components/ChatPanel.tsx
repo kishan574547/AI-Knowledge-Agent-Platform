@@ -3,33 +3,41 @@ import {
   Send,
   User,
   ChevronDown,
-  Check,
   Filter,
-  Sparkles,
   FileText,
   AlertCircle,
   BookOpen,
   Brain,
   History,
   Plus,
+  Copy,
+  Check,
+  RotateCw,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChatMessage, Conversation } from '../types/conversation';
+import { ChatMessage, Conversation, SourceRef } from '../types/conversation';
 import { DocumentItem } from '../types/document';
 import { Spinner } from './Spinner';
+import { MarkdownRenderer } from '../utils/MarkdownRenderer';
+import { Avatar } from './ui/Avatar';
+import { Button } from './ui/Button';
 
 interface ChatPanelProps {
   conversation: Conversation | null;
   documents: DocumentItem[];
   isQuerying: boolean;
-  onSendMessage: (text: string, scope: 'all' | 'selected', selectedIds: string[]) => void;
-  onUpdateScope: (scope: 'all' | 'selected', selectedIds: string[]) => void;
-  onRenameTitle?: (title: string) => void;
+  onSendMessage: (
+    text: string,
+    scope: 'all' | 'selected',
+    selectedDocumentIds: string[]
+  ) => void;
+  onUpdateScope: (scope: 'all' | 'selected', documentIds: string[]) => void;
   onOpenHistory?: () => void;
   onNewChat?: () => void;
 }
 
-function formatTime(iso: string) {
+function formatTime(iso?: string) {
+  if (!iso) return '';
   try {
     return new Date(iso).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   } catch {
@@ -40,203 +48,209 @@ function formatTime(iso: string) {
 // ─── User Bubble ─────────────────────────────────────────────────────────────
 const UserBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => (
   <motion.div
-    initial={{ opacity: 0, y: 10, scale: 0.97 }}
-    animate={{ opacity: 1, y: 0, scale: 1 }}
-    transition={{ type: 'spring', stiffness: 280, damping: 24 }}
-    className="flex items-start gap-2.5 justify-end"
+    initial={{ opacity: 0, y: 8 }}
+    animate={{ opacity: 1, y: 0 }}
+    transition={{ duration: 0.2 }}
+    className="flex items-start gap-2.5 justify-end group"
   >
-    <div className="max-w-[80%]">
-      <div className="bg-accent text-white text-sm px-4 py-2.5 rounded-2xl rounded-tr-sm shadow-sm font-sans">
+    <div className="max-w-[75%] flex flex-col items-end">
+      {/* Accent-tinted background with strong readable text in every theme */}
+      <div className="bg-accent-muted border border-accent/25 text-text-main text-xs sm:text-sm px-4 py-2.5 rounded-lg rounded-tr-none shadow-sm font-sans">
         <p className="leading-relaxed whitespace-pre-wrap break-words">{msg.content}</p>
       </div>
-      <div className="text-right mt-1">
-        <span className="text-[10px] font-mono text-text-muted">{formatTime(msg.timestamp)}</span>
-      </div>
+      <span className="text-[11px] font-sans text-text-secondary mt-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        {formatTime(msg.timestamp)}
+      </span>
     </div>
-    <div className="w-7 h-7 rounded-full bg-accent text-white flex items-center justify-center shrink-0 mt-0.5 shadow-sm font-semibold text-xs">
+    <div className="w-7 h-7 rounded-full bg-accent-muted border border-accent/30 text-accent flex items-center justify-center shrink-0 mt-0.5 text-xs font-semibold">
       <User className="w-3.5 h-3.5" />
     </div>
   </motion.div>
 );
 
-// ─── Assistant Bubble ─────────────────────────────────────────────────────────
-const AssistantBubble: React.FC<{ msg: ChatMessage }> = ({ msg }) => {
+// ─── Assistant Bubble with Markdown, Distinct Error Card, and Sources ─────────
+const AssistantBubble: React.FC<{
+  msg: ChatMessage;
+  onRetry?: (text: string) => void;
+  lastUserQuery?: string;
+}> = ({ msg, onRetry, lastUserQuery }) => {
   const [showSources, setShowSources] = useState(false);
+  const [copied, setCopied] = useState(false);
   const hasSources = msg.sources && msg.sources.length > 0;
 
+  const handleCopy = () => {
+    navigator.clipboard.writeText(msg.content);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Error Card (Defect #6: Render errors as distinct inline card with Retry)
+  if (msg.isError) {
+    return (
+      <motion.div
+        initial={{ opacity: 0, y: 8 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.2 }}
+        className="flex items-start gap-2.5"
+      >
+        <div className="w-7 h-7 rounded-md bg-danger-muted border border-danger/30 text-danger flex items-center justify-center shrink-0 mt-0.5">
+          <AlertCircle className="w-4 h-4" />
+        </div>
+        <div className="max-w-[85%] w-full">
+          <div className="p-4 rounded-lg bg-danger-muted border border-danger/30 text-xs sm:text-sm text-text-main flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div className="space-y-0.5">
+              <p className="font-semibold text-danger">Response Generation Error</p>
+              <p className="text-text-secondary leading-relaxed">{msg.content}</p>
+            </div>
+            {onRetry && lastUserQuery && (
+              <Button
+                variant="danger"
+                size="sm"
+                leftIcon={<RotateCw className="w-3 h-3" />}
+                onClick={() => onRetry(lastUserQuery)}
+              >
+                Retry
+              </Button>
+            )}
+          </div>
+          <span className="text-[11px] font-sans text-text-secondary mt-1 block">
+            {formatTime(msg.timestamp)}
+          </span>
+        </div>
+      </motion.div>
+    );
+  }
+
+  // Normal Assistant Message
   return (
     <motion.div
-      initial={{ opacity: 0, y: 10, scale: 0.97 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      transition={{ type: 'spring', stiffness: 280, damping: 24, delay: 0.04 }}
-      className="flex items-start gap-2.5"
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.2 }}
+      className="flex items-start gap-2.5 group"
     >
-      <motion.div
-        initial={{ scale: 0, rotate: -20 }}
-        animate={{ scale: 1, rotate: 0 }}
-        transition={{ type: 'spring', stiffness: 320, damping: 22 }}
-        className={`w-7 h-7 rounded-full flex items-center justify-center shrink-0 mt-0.5 ${
-          msg.isError
-            ? 'bg-danger-muted border border-danger text-danger'
-            : 'bg-accent-muted border border-accent/20 text-accent'
-        }`}
-      >
-        {msg.isError ? (
-          <AlertCircle className="w-3.5 h-3.5" />
-        ) : (
-          <Sparkles className="w-3.5 h-3.5" />
-        )}
-      </motion.div>
+      {/* Brand mark avatar (Defect #4) */}
+      <Avatar isBrand size="sm" className="mt-0.5" />
 
       <div className="max-w-[85%] space-y-2">
-        <div
-          className={`px-4 py-3 rounded-2xl rounded-tl-sm text-sm border ${
-            msg.isError
-              ? 'bg-danger-muted border-danger/30 text-danger'
-              : 'bg-surface border-border text-text-main shadow-level1'
-          }`}
-        >
-          <div className="leading-relaxed whitespace-pre-wrap break-words font-sans">
-            {msg.content}
-          </div>
+        {/* Clean surface with thin border */}
+        <div className="p-4 rounded-lg rounded-tl-none bg-surface border border-border text-xs sm:text-sm text-text-main shadow-card">
+          <MarkdownRenderer content={msg.content} />
         </div>
 
-        {/* Sources accordion */}
-        {hasSources && (
-          <div className="pt-0.5">
-            <motion.button
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={() => setShowSources(!showSources)}
-              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-accent-muted text-[11px] font-mono font-semibold text-accent hover:bg-accent/20 transition-colors"
-            >
-              <BookOpen className="w-3 h-3" />
-              <span>
-                {msg.sources!.length} verified source{msg.sources!.length !== 1 ? 's' : ''}
-              </span>
-              <motion.div
-                animate={{ rotate: showSources ? 180 : 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 26 }}
+        {/* Sources Row and Action Buttons */}
+        <div className="flex items-center justify-between gap-3 pt-0.5 flex-wrap">
+          {hasSources ? (
+            <div>
+              <button
+                onClick={() => setShowSources(!showSources)}
+                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-accent-muted text-[11px] font-medium text-accent hover:opacity-90 transition-opacity"
               >
-                <ChevronDown className="w-3 h-3" />
-              </motion.div>
-            </motion.button>
+                <BookOpen className="w-3 h-3" />
+                <span>
+                  {msg.sources!.length} verified source{msg.sources!.length !== 1 ? 's' : ''}
+                </span>
+                <ChevronDown
+                  className={`w-3 h-3 transition-transform ${showSources ? 'rotate-180' : ''}`}
+                />
+              </button>
 
-            <AnimatePresence>
-              {showSources && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: 'auto' }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.22, ease: [0.16, 1, 0.3, 1] }}
-                  className="overflow-hidden mt-2 space-y-1.5"
-                >
-                  {msg.sources!.map((s, idx) => (
-                    <motion.div
-                      key={idx}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: idx * 0.05, duration: 0.2 }}
-                      className="p-2 rounded-lg bg-surface border border-border flex items-center justify-between gap-3 text-xs"
-                    >
-                      <div className="flex items-center gap-2 min-w-0">
-                        <FileText className="w-3.5 h-3.5 text-accent shrink-0" />
-                        <span className="font-medium text-text-main truncate max-w-[240px]">
-                          {s.filename}
-                        </span>
-                        {s.page !== undefined && s.page !== null && (
-                          <span className="text-[10px] font-mono text-text-muted">p.{s.page}</span>
+              <AnimatePresence>
+                {showSources && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: 'auto' }}
+                    exit={{ opacity: 0, height: 0 }}
+                    transition={{ duration: 0.2 }}
+                    className="overflow-hidden mt-2 space-y-1.5"
+                  >
+                    {msg.sources!.map((s: SourceRef, idx: number) => (
+                      <div
+                        key={idx}
+                        className="p-2 rounded bg-surface-2 border border-border flex items-center justify-between gap-3 text-xs"
+                      >
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="w-3.5 h-3.5 text-accent shrink-0" />
+                          <span className="font-medium text-text-main truncate max-w-[220px]">
+                            {s.filename}
+                          </span>
+                          {s.page !== undefined && s.page !== null && (
+                            <span className="text-[11px] font-mono text-text-secondary">
+                              p.{s.page}
+                            </span>
+                          )}
+                          <span className="text-[11px] font-mono text-text-secondary">
+                            chunk #{s.chunk_index}
+                          </span>
+                        </div>
+
+                        {s.similarity !== undefined && (
+                          <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-accent-muted text-accent shrink-0">
+                            {Math.round(s.similarity * 100)}% match
+                          </span>
                         )}
-                        <span className="text-[10px] font-mono text-text-muted">
-                          chunk #{s.chunk_index}
-                        </span>
                       </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+          ) : <div />}
 
-                      {s.similarity !== undefined && (
-                        <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-accent-muted text-accent shrink-0">
-                          {Math.round(s.similarity * 100)}% match
-                        </span>
-                      )}
-                    </motion.div>
-                  ))}
-                </motion.div>
-              )}
-            </AnimatePresence>
+          {/* Action buttons: Copy & Timestamp */}
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleCopy}
+              className="text-[11px] text-text-secondary hover:text-text-main flex items-center gap-1 transition-colors px-1 py-0.5 rounded"
+              title="Copy message"
+            >
+              {copied ? <Check className="w-3 h-3 text-success" /> : <Copy className="w-3 h-3" />}
+              <span>{copied ? 'Copied' : 'Copy'}</span>
+            </button>
+
+            {onRetry && lastUserQuery && (
+              <button
+                onClick={() => onRetry(lastUserQuery)}
+                className="text-[11px] text-text-secondary hover:text-text-main flex items-center gap-1 transition-colors px-1 py-0.5 rounded"
+                title="Regenerate answer"
+              >
+                <RotateCw className="w-3 h-3" />
+                <span>Regenerate</span>
+              </button>
+            )}
+
+            <span className="text-[11px] font-sans text-text-secondary opacity-0 group-hover:opacity-100 transition-opacity">
+              {formatTime(msg.timestamp)}
+            </span>
           </div>
-        )}
-
-        <div className="text-[10px] font-mono text-text-muted">{formatTime(msg.timestamp)}</div>
+        </div>
       </div>
     </motion.div>
   );
 };
 
-// ─── Animated Thinking Skeleton ───────────────────────────────────────────────
+// ─── Animated Thinking Shimmer ────────────────────────────────────────────────
 const ThinkingSkeleton: React.FC = () => (
   <motion.div
     initial={{ opacity: 0, y: 8 }}
     animate={{ opacity: 1, y: 0 }}
-    transition={{ type: 'spring', stiffness: 280, damping: 24 }}
+    transition={{ duration: 0.2 }}
     className="flex items-start gap-2.5"
   >
-    <motion.div
-      animate={{
-        boxShadow: [
-          '0 0 0 0 var(--accent-muted)',
-          '0 0 0 6px transparent',
-          '0 0 0 0 var(--accent-muted)',
-        ],
-      }}
-      transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut' }}
-      className="w-7 h-7 rounded-full bg-accent-muted border border-accent/20 flex items-center justify-center shrink-0 mt-0.5 text-accent"
-    >
-      <Sparkles className="w-3.5 h-3.5 animate-pulse" />
-    </motion.div>
-
-    <div className="max-w-[70%] space-y-2.5 p-4 rounded-2xl rounded-tl-sm bg-surface border border-border shadow-level1">
-      {[48, 64, 36].map((w, i) => (
-        <motion.div
-          key={i}
-          className="skeleton-line"
-          style={{ width: `${w * 4}px` }}
-          animate={{ opacity: [0.5, 1, 0.5] }}
-          transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.2 }}
-        />
-      ))}
-      <div className="flex items-center gap-2 mt-1">
-        <Brain className="w-3 h-3 text-accent animate-pulse" />
-        <p className="text-[11px] text-text-muted font-medium">
-          Retrieving chunks & generating grounded answer…
-        </p>
+    <Avatar isBrand size="sm" className="mt-0.5" />
+    <div className="max-w-[70%] space-y-2.5 p-4 rounded-lg rounded-tl-none bg-surface border border-border shadow-card">
+      <div className="skeleton-line w-48" />
+      <div className="skeleton-line w-64" />
+      <div className="skeleton-line w-36" />
+      <div className="flex items-center gap-2 mt-2 pt-1 border-t border-border/50 text-[11px] text-text-secondary">
+        <Brain className="w-3.5 h-3.5 text-accent animate-pulse" />
+        <span>Searching your documents and generating grounded answer…</span>
       </div>
     </div>
   </motion.div>
 );
 
-// ─── Suggestion Chip ──────────────────────────────────────────────────────────
-const SuggestionChip: React.FC<{ label: string; onClick: () => void; delay: number }> = ({
-  label,
-  onClick,
-  delay,
-}) => (
-  <motion.button
-    initial={{ opacity: 0, y: 8 }}
-    animate={{ opacity: 1, y: 0 }}
-    whileHover={{
-      scale: 1.04,
-      borderColor: 'var(--accent)',
-      transition: { type: 'spring', stiffness: 300, damping: 24 },
-    }}
-    whileTap={{ scale: 0.96 }}
-    transition={{ delay, duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
-    onClick={onClick}
-    className="px-3 py-1.5 rounded-xl border border-border bg-surface hover:bg-surface-2 text-xs font-medium text-text-main transition-colors"
-  >
-    {label}
-  </motion.button>
-);
-
-// ─── Main Chat Panel ──────────────────────────────────────────────────────────
+// ─── Main Chat Panel Component ────────────────────────────────────────────────
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   conversation,
   documents,
@@ -252,7 +266,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     conversation?.selectedDocumentIds || []
   );
   const [isScopeMenuOpen, setIsScopeMenuOpen] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
   const scopeMenuRef = useRef<HTMLDivElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -302,179 +315,158 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   };
 
   const suggestionChips = [
-    'Summarize this document',
-    'What are the key takeaways?',
-    'List any risks or requirements',
-    'Explain the main architecture',
+    'Summarize my documents',
+    'List the key points and architecture',
+    'What are the main requirements and deadlines?',
+    'Compare key tradeoffs mentioned',
   ];
 
   const hasMessages = conversation && conversation.messages.length > 0;
 
+  // Retrieve last user query for retry/regenerate
+  const lastUserMsg = conversation?.messages
+    ?.filter((m) => m.role === 'user')
+    ?.slice(-1)[0];
+
   return (
-    <div className="flex flex-col h-full rounded-2xl border border-border bg-surface shadow-level1 overflow-hidden">
-      {/* Header */}
+    <div className="flex flex-col h-full rounded-lg border border-border bg-surface shadow-card overflow-hidden">
+      {/* Workspace Header */}
       <div className="px-5 py-3 border-b border-border bg-surface flex items-center justify-between gap-4 shrink-0">
         <div className="min-w-0">
           <h2 className="font-heading text-sm font-bold text-text-main truncate">
-            {conversation?.title || 'New Exploration'}
+            {conversation?.title || 'New Conversation'}
           </h2>
-          <p className="text-[11px] text-text-muted">
-            Answers grounded in your indexed document chunks
+          <p className="text-[11px] text-text-secondary mt-0.5">
+            Answers grounded strictly in your indexed document chunks
           </p>
         </div>
 
         {/* Action Controls */}
         <div className="flex items-center gap-2">
           {onOpenHistory && (
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+            <Button
+              variant="secondary"
+              size="sm"
               onClick={onOpenHistory}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-border/60 text-xs font-semibold text-text-main transition-all"
-              title="View past conversations"
+              leftIcon={<History className="w-3.5 h-3.5 text-accent" />}
             >
-              <History className="w-3.5 h-3.5 text-accent" />
-              <span>Chat History</span>
-            </motion.button>
+              <span>History</span>
+            </Button>
           )}
 
           {onNewChat && (
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+            <Button
+              variant="primary"
+              size="sm"
               onClick={onNewChat}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-border/60 text-xs font-semibold text-text-main transition-all"
-              title="Start a new chat thread"
+              leftIcon={<Plus className="w-3.5 h-3.5" />}
             >
-              <Plus className="w-3.5 h-3.5 text-accent" />
               <span>New Chat</span>
-            </motion.button>
+            </Button>
           )}
 
           {/* Document scope selector */}
           <div className="relative" ref={scopeMenuRef}>
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
+            <button
               onClick={() => setIsScopeMenuOpen(!isScopeMenuOpen)}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border bg-surface-2 hover:bg-border/60 text-xs font-semibold text-text-main transition-all"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-md border border-border bg-surface hover:bg-surface-2 text-xs font-medium text-text-main transition-colors shadow-sm"
             >
               <Filter className="w-3.5 h-3.5 text-accent" />
               <span>
                 {scope === 'all' ? 'All documents' : `${selectedIds.length} selected`}
               </span>
-              <motion.div
-                animate={{ rotate: isScopeMenuOpen ? 180 : 0 }}
-                transition={{ type: 'spring', stiffness: 300, damping: 26 }}
-              >
-                <ChevronDown className="w-3 h-3 text-text-muted" />
-              </motion.div>
-            </motion.button>
+              <ChevronDown className="w-3 h-3 text-text-muted" />
+            </button>
 
             <AnimatePresence>
               {isScopeMenuOpen && (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.94, y: 6 }}
+                  initial={{ opacity: 0, scale: 0.96, y: 4 }}
                   animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.94, y: 6 }}
-                  transition={{ type: 'spring', stiffness: 340, damping: 28 }}
-                  className="absolute right-0 mt-1.5 w-64 rounded-xl border border-border bg-surface shadow-level2 p-2 z-30"
+                  exit={{ opacity: 0, scale: 0.96, y: 4 }}
+                  transition={{ duration: 0.12 }}
+                  className="absolute right-0 mt-2 w-72 rounded-lg border border-border bg-surface shadow-overlay p-2 z-50 text-left"
                 >
-                <div className="p-1 text-[11px] font-semibold text-text-muted uppercase tracking-wider">
-                  Context Scope
-                </div>
+                  <div className="p-2 border-b border-border mb-1">
+                    <span className="text-xs font-semibold text-text-main">
+                      Filter Retrieval Scope
+                    </span>
+                  </div>
 
-                <motion.button
-                  whileHover={{ backgroundColor: 'var(--accent-muted)' }}
-                  onClick={selectAll}
-                  className={`w-full flex items-center justify-between p-2 rounded-lg text-xs transition-colors ${
-                    scope === 'all'
-                      ? 'bg-accent-muted text-accent font-semibold'
-                      : 'hover:bg-surface-2 text-text-main'
-                  }`}
-                >
-                  <span>Search all workspace files</span>
-                  {scope === 'all' && <Check className="w-3.5 h-3.5" />}
-                </motion.button>
+                  <button
+                    onClick={selectAll}
+                    className="w-full flex items-center justify-between p-2 rounded-md hover:bg-surface-2 text-xs font-medium text-text-main transition-colors"
+                  >
+                    <span>All indexed documents</span>
+                    {scope === 'all' && (
+                      <span className="text-[10px] font-bold text-accent">Active</span>
+                    )}
+                  </button>
 
-                <div className="my-1.5 border-t border-border" />
+                  <div className="my-1 border-t border-border" />
+                  <div className="px-2 py-1 text-[11px] font-semibold text-text-secondary">
+                    Individual Documents
+                  </div>
 
-                <div className="p-1 text-[11px] font-semibold text-text-muted">
-                  Or pick specific files:
-                </div>
-
-                <div className="max-h-44 overflow-y-auto space-y-0.5">
-                  {documents.length === 0 ? (
-                    <div className="p-2 text-center text-xs text-text-muted">
-                      No uploaded documents
-                    </div>
-                  ) : (
-                    documents.map((d) => {
-                      const isChecked = scope === 'selected' && selectedIds.includes(d.id);
-                      return (
-                        <motion.button
-                          key={d.id}
-                          whileHover={{ x: 2 }}
-                          transition={{ type: 'spring', stiffness: 400, damping: 30 }}
-                          onClick={() => {
-                            setScope('selected');
-                            toggleDocument(d.id);
-                          }}
-                          className="w-full flex items-center gap-2 p-1.5 rounded-md hover:bg-surface-2 text-left text-xs text-text-main"
-                        >
-                          <motion.div
-                            animate={{ scale: isChecked ? 1 : 0.9 }}
-                            className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                              isChecked
-                                ? 'bg-accent border-accent text-white'
-                                : 'border-border bg-surface'
-                            }`}
+                  <div className="max-h-48 overflow-y-auto space-y-0.5">
+                    {documents.length === 0 ? (
+                      <div className="p-2 text-xs text-text-secondary italic">
+                        No ready documents found
+                      </div>
+                    ) : (
+                      documents.map((d) => {
+                        const isSelected = selectedIds.includes(d.id);
+                        return (
+                          <button
+                            key={d.id}
+                            onClick={() => toggleDocument(d.id)}
+                            className="w-full flex items-center gap-2 p-2 rounded-md hover:bg-surface-2 text-xs text-left transition-colors"
                           >
-                            {isChecked && <Check className="w-2.5 h-2.5 stroke-[3]" />}
-                          </motion.div>
-                          <span className="truncate flex-1">{d.filename}</span>
-                        </motion.button>
-                      );
-                    })
-                  )}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              readOnly
+                              className="rounded border-border text-accent focus:ring-accent w-3.5 h-3.5"
+                            />
+                            <span className="truncate flex-1 text-text-main">{d.filename}</span>
+                          </button>
+                        );
+                      })
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
         </div>
       </div>
 
       {/* Message Stream */}
       <div className="flex-1 overflow-y-auto p-5 space-y-4">
         {!hasMessages && (
-          <div className="h-full flex flex-col items-center justify-center text-center px-4 py-10">
-            <motion.div
-              animate={{ y: [0, -6, 0] }}
-              transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-              className="w-12 h-12 rounded-2xl bg-accent-muted border border-accent/20 flex items-center justify-center text-accent mb-4"
-            >
-              <Sparkles className="w-6 h-6" />
-            </motion.div>
-            <h3 className="font-heading text-sm font-bold text-text-main">
-              Ask anything about your documents
+          <div className="h-full flex flex-col items-center justify-center text-center px-4 py-8">
+            <div className="w-12 h-12 rounded-lg bg-accent-muted text-accent flex items-center justify-center mb-3">
+              <BookOpen className="w-6 h-6" />
+            </div>
+            <h3 className="font-heading text-base font-bold text-text-main">
+              Ask about your documents
             </h3>
-            <p className="text-xs text-text-muted mt-1 max-w-sm">
-              Questions are matched against vector embeddings and answered from your verified source
-              files.
+            <p className="text-xs text-text-secondary mt-1 max-w-sm leading-relaxed">
+              Every answer is grounded in your verified vector chunks and cites its source.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-2 mt-6 max-w-lg">
               {suggestionChips.map((chip, i) => (
-                <SuggestionChip
+                <button
                   key={i}
-                  label={chip}
-                  delay={i * 0.06 + 0.1}
                   onClick={() => {
                     setInput(chip);
                     textareaRef.current?.focus();
                   }}
-                />
+                  className="px-3 py-1.5 rounded-md border border-border bg-surface hover:bg-surface-2 text-xs font-medium text-text-main transition-colors shadow-sm"
+                >
+                  {chip}
+                </button>
               ))}
             </div>
           </div>
@@ -484,7 +476,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           msg.role === 'user' ? (
             <UserBubble key={msg.id} msg={msg} />
           ) : (
-            <AssistantBubble key={msg.id} msg={msg} />
+            <AssistantBubble
+              key={msg.id}
+              msg={msg}
+              onRetry={(text) => onSendMessage(text, scope, selectedIds)}
+              lastUserQuery={lastUserMsg?.content}
+            />
           )
         )}
 
@@ -492,17 +489,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Input Section */}
+      {/* Input Section (Defect #10: Clear Send button + helper line) */}
       <div className="p-4 border-t border-border bg-surface shrink-0">
-        <motion.form
+        <form
           onSubmit={handleSend}
-          animate={{
-            boxShadow: isFocused
-              ? '0 0 0 2px var(--accent)'
-              : '0 0 0 1px var(--border)',
-          }}
-          transition={{ duration: 0.15 }}
-          className="relative rounded-xl overflow-hidden bg-surface-2"
+          className="relative rounded-lg border border-border focus-within:border-accent bg-surface-2/60 transition-colors"
         >
           <textarea
             ref={textareaRef}
@@ -514,27 +505,24 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
             }}
             onKeyDown={handleKeyDown}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
-            placeholder="Ask a question… (Enter to send, Shift+Enter for newline)"
-            className="w-full resize-none pl-4 pr-12 py-3 bg-transparent text-sm text-text-main placeholder-text-muted/70 transition-all leading-relaxed font-sans focus:outline-none"
+            placeholder="Ask about your documents..."
+            className="w-full resize-none pl-4 pr-12 py-3 bg-transparent text-xs sm:text-sm text-text-main placeholder-text-secondary/70 leading-relaxed font-sans focus:outline-none"
           />
 
-          <motion.button
+          {/* Primary Round Send Button (Rule 5.5 & Defect #10) */}
+          <button
             type="submit"
             disabled={!input.trim() || isQuerying}
-            whileHover={{ scale: input.trim() && !isQuerying ? 1.08 : 1 }}
-            whileTap={{ scale: input.trim() && !isQuerying ? 0.92 : 1 }}
-            transition={{ type: 'spring', stiffness: 380, damping: 26 }}
-            className="btn-primary absolute right-2.5 top-2.5 !p-2 !rounded-lg"
+            className="absolute right-2.5 top-2.5 w-8 h-8 rounded-full bg-accent text-text-on-accent flex items-center justify-center hover:opacity-90 disabled:opacity-40 disabled:pointer-events-none transition-all shadow-sm"
+            aria-label="Send question"
             title="Send question"
           >
             {isQuerying ? <Spinner size="sm" /> : <Send className="w-3.5 h-3.5" />}
-          </motion.button>
-        </motion.form>
+          </button>
+        </form>
 
-        <div className="mt-2 text-center text-[11px] font-medium text-text-muted">
-          Every answer links back to the exact document and passage it came from.
+        <div className="mt-2 text-center text-[11px] text-text-secondary">
+          Enter to send, Shift+Enter for a new line
         </div>
       </div>
     </div>

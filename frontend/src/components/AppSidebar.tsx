@@ -278,10 +278,10 @@ export const AppSidebar: React.FC<AppSidebarProps> = ({ collapsed, onToggle }) =
       {/* ── ZONE 2: Upload button (always visible, never scrolls) ── */}
       <div className="px-3 py-3 border-b border-border shrink-0">
         <motion.button
-          whileHover={{ scale: 1.03 }}
-          whileTap={{ scale: 0.97 }}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
           onClick={() => setIsUploadModalOpen(true)}
-          className={`btn-primary w-full !rounded-xl transition-all ${
+          className={`btn-secondary w-full !rounded-lg text-xs font-semibold transition-all ${
             collapsed ? '!px-0 !py-2 !gap-0 justify-center' : ''
           }`}
           title={collapsed ? 'Upload Document' : undefined}
